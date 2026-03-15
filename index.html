@@ -144,6 +144,36 @@ canvas { display: block; }
 }
 #retry-btn:hover { background: rgba(76,175,80,0.6); transform: scale(1.05); }
 
+/* Aphid minigame */
+#aphid-overlay {
+  position: fixed; inset: 0; z-index: 50; pointer-events: none; display: none;
+}
+#aphid-overlay.active { pointer-events: auto; display: block; }
+#aphid-timer {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  font-size: 72px; font-weight: bold; color: #ff4444; z-index: 55;
+  text-shadow: 0 0 20px rgba(255,0,0,0.8), 2px 2px 4px rgba(0,0,0,0.8);
+  pointer-events: none; display: none;
+}
+#aphid-count {
+  position: fixed; top: 45%; left: 50%; transform: translate(-50%, -100%);
+  font-size: 20px; color: #fff; z-index: 55; pointer-events: none; display: none;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+}
+#aphid-result {
+  position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%);
+  font-size: 36px; font-weight: bold; z-index: 55; pointer-events: none; display: none;
+  text-shadow: 0 0 15px currentColor, 2px 2px 4px rgba(0,0,0,0.8);
+  animation: floatUp 1.5s ease-out forwards;
+}
+
+#sound-toggle {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(80px);
+  z-index: 10; width: 40px; height: 40px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3); background: rgba(100,100,100,0.5);
+  color: #fff; font-size: 18px; cursor: pointer; backdrop-filter: blur(10px);
+}
+
 #start-screen {
   position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -184,6 +214,12 @@ canvas { display: block; }
 </div>
 
 <button id="photo-btn" onclick="doPhotosynthesis(event)">☀️<br>Click!</button>
+<button id="sound-toggle" onclick="toggleSound()">🔊</button>
+
+<div id="aphid-overlay"></div>
+<div id="aphid-timer"></div>
+<div id="aphid-count"></div>
+<div id="aphid-result"></div>
 <button id="shop-btn" onclick="toggleShop()">🛒 Shop</button>
 <button id="skill-btn" onclick="toggleSkills()">🌳 Skills</button>
 
@@ -264,10 +300,11 @@ const G = {
   clickPower: 1, passiveGen: 0, weatherResist: 0,
   alive: true, started: false, gameOver: false,
   leafHealth: 1, leafScale: 1,
+  aphidDamageCycles: 0, aphidProductionMult: 1,
   upgrades: {
-    cuticle: { level: 0, max: 5, baseCost: 15, costMult: 2.2, desc: '+1 sugar/click', icon: '🛡️' },
+    cuticle: { level: 0, max: 5, baseCost: 15, costMult: 2.5, desc: '+1 sugar/click', icon: '🛡️' },
     chloro: { level: 0, max: 5, baseCost: 30, costMult: 2.5, desc: '+1 passive sugar/sec', icon: '🧬' },
-    weatherRes: { level: 0, max: 3, baseCost: 50, costMult: 3, desc: '-25% weather penalty', icon: '🌂' },
+    weatherRes: { level: 0, max: 3, baseCost: 50, costMult: 2.5, desc: '-25% weather penalty', icon: '🌂' },
   },
   skills: {},
   deathQuotes: [
@@ -297,7 +334,7 @@ const WEATHERS = [
 ];
 
 const EVENTS = [
-  { name: 'aphid', label: '🐛 Aphid Attack!', mult: 0.7, duration: 12 },
+  { name: 'aphid', label: '🐛 Aphid Attack!', mult: 1.0, duration: 12, minigame: true },
   { name: 'pollinator', label: '🐝 Pollinator Visit!', mult: 1.5, duration: 10 },
   { name: 'wind', label: '💨 Strong Wind!', mult: 0.8, duration: 12 },
   { name: 'rainbow', label: '🌈 Rainbow!', mult: 1.75, duration: 10, rare: true },
@@ -542,6 +579,8 @@ function createLeaf() {
   });
   leafMesh = new THREE.Mesh(leafGeo, leafMat);
   leafMesh.castShadow = true;
+  leafMesh.userData.baseEmissive = 0x114411;
+  leafMesh.userData.baseEmissiveIntensity = 0.3;
   leafGroup.add(leafMesh);
 
   // Glow ring
@@ -557,6 +596,12 @@ function createLeaf() {
   const stem = new THREE.Mesh(stemGeo, stemMat);
   stem.position.y = -1.1;
   leafGroup.add(stem);
+
+  // Always-visible point light on the leaf so it glows at night
+  const leafLight = new THREE.PointLight(0x66ff66, 1.5, 8);
+  leafLight.position.set(0, 0, 0.5);
+  leafGroup.add(leafLight);
+  leafGroup.userData.leafLight = leafLight;
 }
 
 // ============ DAY/NIGHT CYCLE ============
@@ -640,6 +685,13 @@ function updateDayNightCycle() {
 
   // Tone mapping exposure
   renderer.toneMappingExposure = sunHeight > 0 ? 1.0 + sunHeight * 0.3 : Math.max(0.3, 1.0 + sunHeight * 0.7);
+
+  // Boost leaf glow at night so it's always visible
+  if (leafMesh && leafGroup.userData.leafLight) {
+    const nightFactor = Math.max(0, -sunHeight); // 0 during day, up to 1 at night
+    leafMesh.material.emissiveIntensity = 0.3 + nightFactor * 0.7;
+    leafGroup.userData.leafLight.intensity = 0.5 + nightFactor * 2.5;
+  }
 
   // Update HUD sun/moon arc
   updateSkyArcHUD(phase);
@@ -777,10 +829,11 @@ function restartGame() {
     alive: true, gameOver: false, leafHealth: 1, leafScale: 1,
     skills: {},
     upgrades: {
-      cuticle: { level: 0, max: 5, baseCost: 15, costMult: 2.2, desc: '+1 sugar/click', icon: '🛡️' },
+      cuticle: { level: 0, max: 5, baseCost: 15, costMult: 2.5, desc: '+1 sugar/click', icon: '🛡️' },
       chloro: { level: 0, max: 5, baseCost: 30, costMult: 2.5, desc: '+1 passive sugar/sec', icon: '🧬' },
-      weatherRes: { level: 0, max: 3, baseCost: 50, costMult: 3, desc: '-25% weather penalty', icon: '🌂' },
+      weatherRes: { level: 0, max: 3, baseCost: 50, costMult: 2.5, desc: '-25% weather penalty', icon: '🌂' },
     },
+    aphidDamageCycles: 0, aphidProductionMult: 1,
   });
   SKILL_TREE.forEach(b => b.nodes.forEach(n => n.unlocked = false));
   nextWeatherIn = 15 + Math.random() * 15;
@@ -792,9 +845,17 @@ function restartGame() {
   createLeaf();
   if (dyingLeaf) { scene.remove(dyingLeaf); dyingLeaf = null; }
 
-  // Clear falling leaves
+  // Clear falling leaves & cosmetics
   fallingLeaves.forEach(l => scene.remove(l));
   fallingLeaves = [];
+  clearSeasonalCosmetics();
+  lastSeasonForCosmetics = -1;
+  if (aphidGame.active) {
+    aphidGame.aphids.forEach(a => scene.remove(a.mesh));
+    aphidGame.active = false;
+    aphidGame.aphids = [];
+    aphidMeshes = [];
+  }
 
   updateHUD();
   gameLoop(performance.now());
@@ -814,10 +875,23 @@ function gameLoop(now) {
       if (G.sugarThisCycle >= G.quota) {
         G.cycle++;
         G.timer = 60;
-        G.quota = Math.floor(G.quota * 1.4 + 5);
+        // Harder progression: steeper after cycle 10
+        if (G.cycle <= 10) {
+          G.quota = Math.floor(G.quota * 1.4 + 5);
+        } else {
+          G.quota = Math.floor(G.quota * 1.8 + 15);
+        }
         G.sugarThisCycle = 0;
         G.leafScale += 0.05;
         leafGroup.scale.setScalar(G.leafScale);
+        // Aphid damage recovery
+        if (G.aphidDamageCycles > 0) {
+          G.aphidDamageCycles--;
+          if (G.aphidDamageCycles <= 0) {
+            G.aphidProductionMult = 1;
+            removeLeafHoles();
+          }
+        }
       } else {
         triggerDeath();
         requestAnimationFrame(gameLoop);
@@ -849,17 +923,30 @@ function gameLoop(now) {
 
     // Events
     G.nextEventIn -= dt;
-    if (G.nextEventIn <= 0 && !G.event) {
+    if (G.nextEventIn <= 0 && !G.event && !aphidGame.active) {
       let pool = EVENTS.filter(e => !e.rare || Math.random() < 0.3);
       const ev = pool[Math.floor(Math.random() * pool.length)];
-      G.event = ev;
-      G.eventDuration = ev.duration;
-      G.eventTimer = ev.duration;
-      G.nextEventIn = 30 + Math.random() * 30;
+      if (ev.minigame && ev.name === 'aphid') {
+        startAphidMinigame();
+        G.nextEventIn = 30 + Math.random() * 30;
+      } else {
+        G.event = ev;
+        G.eventDuration = ev.duration;
+        G.eventTimer = ev.duration;
+        G.nextEventIn = 30 + Math.random() * 30;
+      }
     }
     if (G.event) {
       G.eventTimer -= dt;
       if (G.eventTimer <= 0) { G.event = null; }
+    }
+
+    // Aphid minigame tick
+    if (aphidGame.active) updateAphidMinigame(dt);
+
+    // Aphid damage recovery
+    if (G.aphidDamageCycles > 0) {
+      // tracked per cycle completion
     }
 
     // Passive generation
@@ -879,6 +966,8 @@ function gameLoop(now) {
   updateFallingLeaves(dt);
   updateParticles(dt);
   updateRainSnow(dt);
+  updateSeasonalCosmetics(dt);
+  if (soundEnabled) updateAmbientSounds();
   if (dyingLeaf) updateDyingLeaf(dt);
   controls.update();
   updateHUD();
@@ -899,7 +988,7 @@ function getMultiplier() {
   }
 
   let eventMult = G.event ? G.event.mult : 1;
-  return seasonMult * weatherMult * eventMult;
+  return seasonMult * weatherMult * eventMult * G.aphidProductionMult;
 }
 
 function doPhotosynthesis(e) {
@@ -1215,6 +1304,394 @@ function buySkill(branch, bi, ni) {
   renderSkillTree();
 }
 
+// ============ APHID MINIGAME ============
+const aphidGame = { active: false, aphids: [], timer: 0, totalAphids: 0 };
+let aphidMeshes = [];
+
+function startAphidMinigame() {
+  aphidGame.active = true;
+  aphidGame.timer = 10;
+  aphidGame.aphids = [];
+  aphidMeshes = [];
+  const count = 5 + Math.floor(Math.random() * 4); // 5-8
+  aphidGame.totalAphids = count;
+
+  for (let i = 0; i < count; i++) {
+    const geo = new THREE.SphereGeometry(0.25, 6, 6);
+    const color = Math.random() > 0.5 ? 0x44aa22 : 0x886633;
+    const mat = new THREE.MeshBasicMaterial({ color });
+    const mesh = new THREE.Mesh(geo, mat);
+    // Place on trees or flying near them
+    const tree = forestTrees[Math.floor(Math.random() * forestTrees.length)];
+    if (tree) {
+      mesh.position.set(
+        tree.position.x + (Math.random() - 0.5) * 3,
+        2 + Math.random() * 6,
+        tree.position.z + (Math.random() - 0.5) * 3
+      );
+    } else {
+      mesh.position.set((Math.random() - 0.5) * 20, 3 + Math.random() * 5, (Math.random() - 0.5) * 20);
+    }
+    mesh.userData.aphidId = i;
+    mesh.userData.bobPhase = Math.random() * Math.PI * 2;
+    mesh.userData.bobSpeed = 1 + Math.random();
+    mesh.userData.baseY = mesh.position.y;
+    scene.add(mesh);
+    aphidGame.aphids.push({ mesh, alive: true });
+    aphidMeshes.push(mesh);
+  }
+
+  document.getElementById('aphid-overlay').classList.add('active');
+  document.getElementById('aphid-timer').style.display = 'block';
+  document.getElementById('aphid-count').style.display = 'block';
+  document.getElementById('event-pill').style.display = 'block';
+  document.getElementById('event-pill').textContent = '🐛 Aphid Attack! CLICK THEM!';
+}
+
+function updateAphidMinigame(dt) {
+  aphidGame.timer -= dt;
+  const remaining = aphidGame.aphids.filter(a => a.alive).length;
+
+  document.getElementById('aphid-timer').textContent = Math.ceil(Math.max(0, aphidGame.timer));
+  document.getElementById('aphid-count').textContent = `🐛 ${remaining} aphids remaining`;
+
+  // Bob the aphids
+  aphidGame.aphids.forEach(a => {
+    if (a.alive) {
+      a.mesh.userData.bobPhase += dt * a.mesh.userData.bobSpeed;
+      a.mesh.position.y = a.mesh.userData.baseY + Math.sin(a.mesh.userData.bobPhase) * 0.3;
+      // Slight horizontal drift
+      a.mesh.position.x += Math.sin(a.mesh.userData.bobPhase * 0.7) * dt * 0.3;
+    }
+  });
+
+  if (remaining === 0) {
+    endAphidMinigame(true);
+  } else if (aphidGame.timer <= 0) {
+    endAphidMinigame(false);
+  }
+}
+
+function endAphidMinigame(success) {
+  aphidGame.active = false;
+  // Clean up meshes
+  aphidGame.aphids.forEach(a => scene.remove(a.mesh));
+  aphidGame.aphids = [];
+  aphidMeshes = [];
+
+  document.getElementById('aphid-overlay').classList.remove('active');
+  document.getElementById('aphid-timer').style.display = 'none';
+  document.getElementById('aphid-count').style.display = 'none';
+  document.getElementById('event-pill').style.display = 'none';
+
+  const resultEl = document.getElementById('aphid-result');
+  resultEl.style.display = 'block';
+
+  if (success) {
+    resultEl.textContent = '✅ Aphids Cleared! Bonus!';
+    resultEl.style.color = '#4CAF50';
+    G.sugar += 20;
+    G.totalSugar += 20;
+    G.sugarThisCycle += 20;
+  } else {
+    resultEl.textContent = '💀 Aphids Win! -50% Sugar!';
+    resultEl.style.color = '#ff4444';
+    G.sugar = Math.floor(G.sugar * 0.5);
+    G.aphidProductionMult = 0.5;
+    G.aphidDamageCycles = 3;
+    addLeafHoles();
+  }
+
+  setTimeout(() => { resultEl.style.display = 'none'; }, 1500);
+}
+
+function addLeafHoles() {
+  if (!leafGroup) return;
+  // Add dark spots to leaf mesh
+  for (let i = 0; i < 5; i++) {
+    const hole = new THREE.Mesh(
+      new THREE.CircleGeometry(0.08 + Math.random() * 0.06, 8),
+      new THREE.MeshBasicMaterial({ color: 0x1a0a00, side: THREE.DoubleSide })
+    );
+    hole.position.set((Math.random() - 0.5) * 0.5, (Math.random() - 0.3) * 0.7, 0.08);
+    hole.userData.isHole = true;
+    leafGroup.add(hole);
+  }
+}
+
+function removeLeafHoles() {
+  if (!leafGroup) return;
+  for (let i = leafGroup.children.length - 1; i >= 0; i--) {
+    if (leafGroup.children[i].userData && leafGroup.children[i].userData.isHole) {
+      leafGroup.remove(leafGroup.children[i]);
+    }
+  }
+}
+
+// ============ SEASONAL COSMETICS ============
+let seasonalObjects = [];
+let seasonalBirds = [];
+
+function clearSeasonalCosmetics() {
+  seasonalObjects.forEach(obj => scene.remove(obj));
+  seasonalObjects = [];
+  seasonalBirds.forEach(b => scene.remove(b.mesh));
+  seasonalBirds = [];
+}
+
+function spawnSeasonalCosmetics() {
+  clearSeasonalCosmetics();
+  const season = SEASONS[G.seasonIndex].name;
+
+  if (season === 'spring') {
+    // Flowers scattered on the ground
+    const flowerColors = [0xff69b4, 0xff4500, 0xffff00, 0x9370db, 0xff1493, 0x00bfff];
+    for (let i = 0; i < 40; i++) {
+      const group = new THREE.Group();
+      const x = (Math.random() - 0.5) * 60;
+      const z = (Math.random() - 0.5) * 60;
+      group.position.set(x, 0.05, z);
+      // Petals
+      const color = flowerColors[Math.floor(Math.random() * flowerColors.length)];
+      for (let p = 0; p < 5; p++) {
+        const petal = new THREE.Mesh(
+          new THREE.CircleGeometry(0.15 + Math.random() * 0.1, 6),
+          new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide })
+        );
+        const angle = (p / 5) * Math.PI * 2;
+        petal.position.set(Math.cos(angle) * 0.12, 0, Math.sin(angle) * 0.12);
+        petal.rotation.x = -Math.PI / 2;
+        group.add(petal);
+      }
+      // Center
+      const center = new THREE.Mesh(
+        new THREE.SphereGeometry(0.06, 6, 6),
+        new THREE.MeshLambertMaterial({ color: 0xffdd00 })
+      );
+      center.position.y = 0.02;
+      group.add(center);
+      scene.add(group);
+      seasonalObjects.push(group);
+    }
+  } else if (season === 'summer') {
+    // Birds flying around
+    for (let i = 0; i < 8; i++) {
+      const bird = new THREE.Group();
+      // Body
+      const body = new THREE.Mesh(
+        new THREE.SphereGeometry(0.15, 5, 4),
+        new THREE.MeshLambertMaterial({ color: Math.random() > 0.5 ? 0x333333 : 0x553322 })
+      );
+      bird.add(body);
+      // Wings
+      const wingGeo = new THREE.PlaneGeometry(0.4, 0.12);
+      const wingMat = new THREE.MeshLambertMaterial({ color: 0x444444, side: THREE.DoubleSide });
+      const lWing = new THREE.Mesh(wingGeo, wingMat);
+      lWing.position.set(-0.2, 0, 0);
+      lWing.userData.isWing = true;
+      bird.add(lWing);
+      const rWing = new THREE.Mesh(wingGeo, wingMat);
+      rWing.position.set(0.2, 0, 0);
+      rWing.userData.isWing = true;
+      bird.add(rWing);
+
+      bird.position.set(
+        (Math.random() - 0.5) * 40,
+        8 + Math.random() * 8,
+        (Math.random() - 0.5) * 40
+      );
+      bird.userData = {
+        angle: Math.random() * Math.PI * 2,
+        radius: 10 + Math.random() * 15,
+        speed: 0.3 + Math.random() * 0.5,
+        height: bird.position.y,
+        phase: Math.random() * Math.PI * 2,
+        centerX: (Math.random() - 0.5) * 10,
+        centerZ: (Math.random() - 0.5) * 10,
+      };
+      scene.add(bird);
+      seasonalBirds.push({ mesh: bird });
+    }
+  } else if (season === 'fall') {
+    // Pumpkins on the ground
+    for (let i = 0; i < 20; i++) {
+      const pumpkin = new THREE.Group();
+      const x = (Math.random() - 0.5) * 50;
+      const z = (Math.random() - 0.5) * 50;
+      pumpkin.position.set(x, 0.25, z);
+      const size = 0.2 + Math.random() * 0.2;
+      const body = new THREE.Mesh(
+        new THREE.SphereGeometry(size, 8, 6),
+        new THREE.MeshLambertMaterial({ color: 0xff6600 })
+      );
+      body.scale.y = 0.75;
+      pumpkin.add(body);
+      // Stem
+      const stem = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.03, 0.04, 0.12, 4),
+        new THREE.MeshLambertMaterial({ color: 0x4a2e15 })
+      );
+      stem.position.y = size * 0.7;
+      pumpkin.add(stem);
+      scene.add(pumpkin);
+      seasonalObjects.push(pumpkin);
+    }
+  } else if (season === 'winter') {
+    // Snow covering ground - white patches
+    for (let i = 0; i < 30; i++) {
+      const snow = new THREE.Mesh(
+        new THREE.CircleGeometry(1 + Math.random() * 2, 8),
+        new THREE.MeshLambertMaterial({ color: 0xeeeeff, side: THREE.DoubleSide })
+      );
+      snow.rotation.x = -Math.PI / 2;
+      snow.position.set((Math.random() - 0.5) * 60, 0.02, (Math.random() - 0.5) * 60);
+      scene.add(snow);
+      seasonalObjects.push(snow);
+    }
+  }
+}
+
+let lastSeasonForCosmetics = -1;
+
+function updateSeasonalCosmetics(dt) {
+  // Check if season changed
+  if (G.seasonIndex !== lastSeasonForCosmetics) {
+    lastSeasonForCosmetics = G.seasonIndex;
+    spawnSeasonalCosmetics();
+  }
+
+  // Animate birds in summer
+  seasonalBirds.forEach(b => {
+    const ud = b.mesh.userData;
+    ud.angle += ud.speed * dt;
+    ud.phase += dt * 5;
+    b.mesh.position.x = ud.centerX + Math.cos(ud.angle) * ud.radius;
+    b.mesh.position.z = ud.centerZ + Math.sin(ud.angle) * ud.radius;
+    b.mesh.position.y = ud.height + Math.sin(ud.phase * 0.3) * 0.5;
+    b.mesh.rotation.y = ud.angle + Math.PI / 2;
+    // Flap wings
+    b.mesh.children.forEach(c => {
+      if (c.userData && c.userData.isWing) {
+        c.rotation.z = Math.sin(ud.phase) * 0.6;
+      }
+    });
+  });
+}
+
+// ============ AMBIENT SOUND SYSTEM ============
+let audioCtx = null;
+let soundEnabled = false;
+let ambientSources = {};
+let currentSoundSeason = null;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function toggleSound() {
+  if (!audioCtx) initAudio();
+  soundEnabled = !soundEnabled;
+  document.getElementById('sound-toggle').textContent = soundEnabled ? '🔊' : '🔇';
+  if (!soundEnabled) {
+    stopAllAmbient();
+  } else {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    updateAmbientSounds();
+  }
+}
+
+function stopAllAmbient() {
+  Object.values(ambientSources).forEach(s => {
+    try { s.source.stop(); } catch(e) {}
+  });
+  ambientSources = {};
+  currentSoundSeason = null;
+}
+
+function createNoise(type, gain, filterFreq) {
+  if (!audioCtx || !soundEnabled) return null;
+  const bufferSize = audioCtx.sampleRate * 2;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() * 2 - 1);
+  }
+  const source = audioCtx.createBufferSource();
+  source.buffer = buffer;
+  source.loop = true;
+
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = type || 'lowpass';
+  filter.frequency.value = filterFreq || 400;
+
+  const gainNode = audioCtx.createGain();
+  gainNode.gain.value = gain || 0.02;
+
+  source.connect(filter);
+  filter.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  source.start();
+  return { source, gain: gainNode, filter };
+}
+
+function createChirp(interval, gain) {
+  if (!audioCtx || !soundEnabled) return null;
+  const gainNode = audioCtx.createGain();
+  gainNode.gain.value = 0;
+  gainNode.connect(audioCtx.destination);
+
+  const osc = audioCtx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.value = 2000 + Math.random() * 2000;
+  osc.connect(gainNode);
+  osc.start();
+
+  // Schedule chirps
+  const chirpLoop = setInterval(() => {
+    if (!soundEnabled) { clearInterval(chirpLoop); return; }
+    const now = audioCtx.currentTime;
+    const chirpGain = gain || 0.015;
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(chirpGain, now + 0.02);
+    gainNode.gain.linearRampToValueAtTime(0, now + 0.08);
+    osc.frequency.setValueAtTime(2000 + Math.random() * 2500, now);
+    osc.frequency.linearRampToValueAtTime(1500 + Math.random() * 1500, now + 0.06);
+  }, interval + Math.random() * interval);
+
+  return { source: osc, gain: gainNode, interval: chirpLoop };
+}
+
+function updateAmbientSounds() {
+  if (!soundEnabled || !audioCtx) return;
+  const season = SEASONS[G.seasonIndex].name;
+  if (season === currentSoundSeason) return;
+  stopAllAmbient();
+  currentSoundSeason = season;
+
+  if (season === 'spring') {
+    ambientSources.wind = createNoise('lowpass', 0.01, 300);
+    ambientSources.birds1 = createChirp(1500, 0.02);
+    ambientSources.birds2 = createChirp(2200, 0.015);
+    ambientSources.birds3 = createChirp(3000, 0.01);
+    ambientSources.rustle = createNoise('bandpass', 0.008, 800);
+  } else if (season === 'summer') {
+    ambientSources.wind = createNoise('lowpass', 0.008, 250);
+    ambientSources.birds1 = createChirp(1200, 0.025);
+    ambientSources.birds2 = createChirp(1800, 0.02);
+    ambientSources.birds3 = createChirp(2500, 0.015);
+    ambientSources.birds4 = createChirp(3500, 0.01);
+    ambientSources.rustle = createNoise('bandpass', 0.006, 700);
+  } else if (season === 'fall') {
+    ambientSources.wind = createNoise('lowpass', 0.025, 400);
+    ambientSources.rustle = createNoise('bandpass', 0.015, 1000);
+    ambientSources.birds1 = createChirp(4000, 0.008);
+  } else if (season === 'winter') {
+    ambientSources.wind = createNoise('lowpass', 0.035, 200);
+    ambientSources.howl = createNoise('bandpass', 0.01, 150);
+  }
+}
+
 // ============ CLICK ON 3D LEAF ============
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -1227,6 +1704,30 @@ renderer.domElement.addEventListener('click', (e) => {
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouse, camera);
+
+  // Check aphid clicks first
+  if (aphidGame.active && aphidMeshes.length > 0) {
+    const aphidHits = raycaster.intersectObjects(aphidMeshes, false);
+    if (aphidHits.length > 0) {
+      const hitMesh = aphidHits[0].object;
+      const aphid = aphidGame.aphids.find(a => a.mesh === hitMesh && a.alive);
+      if (aphid) {
+        aphid.alive = false;
+        scene.remove(aphid.mesh);
+        aphidMeshes = aphidMeshes.filter(m => m !== hitMesh);
+        // Pop effect
+        const ft = document.createElement('div');
+        ft.className = 'float-text';
+        ft.textContent = '🐛💥';
+        ft.style.left = e.clientX + 'px';
+        ft.style.top = e.clientY + 'px';
+        document.body.appendChild(ft);
+        setTimeout(() => ft.remove(), 1000);
+      }
+      return; // Don't also trigger photosynthesis
+    }
+  }
+
   const hits = raycaster.intersectObjects(leafGroup.children, true);
   if (hits.length > 0) doPhotosynthesis(e);
 });
