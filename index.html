@@ -2,1960 +2,1644 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Leaf Life Simulator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🍂 Leaf Game v6</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; background: #000; cursor: pointer; }
-canvas { display: block; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-#hud { position: fixed; top: 0; left: 0; right: 0; padding: 15px 20px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; z-index: 10; }
-#hud > * { pointer-events: auto; }
-
-#sugar-display {
-  font-size: 36px; font-weight: bold; color: #fff; text-shadow: 0 0 10px rgba(255,200,0,0.8), 2px 2px 4px rgba(0,0,0,0.5);
-  display: flex; align-items: center; gap: 10px;
-}
-#sugar-display .icon { font-size: 28px; }
-#sugar-per-sec { font-size: 14px; color: rgba(255,255,255,0.7); margin-left: 5px; }
-
-/* Day/night arc */
-#sky-arc {
-  position: fixed; top: 0; left: 50%; transform: translateX(-50%);
-  width: 400px; height: 60px; z-index: 10; pointer-events: none;
-}
-#sky-arc-icon {
-  position: absolute; font-size: 32px; transition: none;
-  filter: drop-shadow(0 0 8px rgba(255,200,0,0.8));
-}
-#quota-display {
-  position: fixed; top: 62px; left: 50%; transform: translateX(-50%);
-  color: #fff; font-size: 14px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); z-index: 10;
+:root {
+  --bg-dark: #0a0f0a;
+  --bg-panel: #111a11;
+  --bg-card: #1a2a1a;
+  --bg-card-hover: #1f331f;
+  --green-1: #2d5a2d;
+  --green-2: #3a7a3a;
+  --green-3: #4a9a4a;
+  --green-bright: #6fdc6f;
+  --green-glow: #3aff3a;
+  --gold: #ffd700;
+  --gold-dark: #b8960f;
+  --text: #e0e8e0;
+  --text-dim: #8a9a8a;
+  --text-bright: #ffffff;
+  --danger: #ff4444;
+  --blue: #4488ff;
+  --purple: #aa66ff;
+  --orange: #ff8844;
 }
 
-#status-bar {
-  position: fixed; top: 15px; right: 20px;
-  display: flex; flex-direction: column; gap: 8px; align-items: flex-end; z-index: 10;
-}
-.status-pill {
-  padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
-  color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-  backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2);
-}
-#season-pill { background: rgba(76,175,80,0.7); }
-#weather-pill { background: rgba(33,150,243,0.7); }
-#event-pill { background: rgba(255,152,0,0.7); display: none; }
-#cycle-pill { background: rgba(156,39,176,0.5); font-size: 11px; }
-
-#photo-btn {
-  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-  width: 120px; height: 120px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.5);
-  background: radial-gradient(circle, #66BB6A, #388E3C); color: #fff;
-  font-size: 16px; font-weight: bold; cursor: pointer; z-index: 10;
-  box-shadow: 0 0 30px rgba(76,175,80,0.5), inset 0 -4px 10px rgba(0,0,0,0.2);
-  transition: transform 0.1s, box-shadow 0.1s; user-select: none;
-}
-#photo-btn:active { transform: translateX(-50%) scale(0.92); box-shadow: 0 0 15px rgba(76,175,80,0.8); }
-#photo-btn:hover { box-shadow: 0 0 40px rgba(76,175,80,0.8), inset 0 -4px 10px rgba(0,0,0,0.2); }
-
-.float-text {
-  position: fixed; pointer-events: none; z-index: 20;
-  font-size: 24px; font-weight: bold; color: #FFD700;
-  text-shadow: 0 0 10px rgba(255,215,0,0.8), 2px 2px 4px rgba(0,0,0,0.5);
-  animation: floatUp 1s ease-out forwards;
-}
-@keyframes floatUp {
-  0% { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(-80px) scale(1.3); }
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg-dark);
+  color: var(--text);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-#shop-btn, #skill-btn {
-  position: fixed; bottom: 30px; z-index: 10;
-  padding: 12px 20px; border-radius: 25px; border: 2px solid rgba(255,255,255,0.3);
-  color: #fff; font-size: 14px; font-weight: bold; cursor: pointer;
-  backdrop-filter: blur(10px); transition: all 0.2s;
+/* ===== LAYOUT ===== */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  max-width: 100vw;
+  overflow: hidden;
 }
-#shop-btn { right: 30px; background: rgba(255,152,0,0.7); }
-#skill-btn { left: 30px; background: rgba(156,39,176,0.7); }
-#shop-btn:hover, #skill-btn:hover { transform: scale(1.05); }
 
-#shop-panel, #skill-panel {
-  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  background: rgba(20,20,30,0.95); border-radius: 20px; padding: 30px;
-  border: 2px solid rgba(255,255,255,0.2); z-index: 100;
-  backdrop-filter: blur(20px); display: none; min-width: 350px; max-width: 90vw; max-height: 80vh; overflow-y: auto;
+#top-bar {
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--green-1);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 100;
+  min-height: 56px;
 }
-.panel-title { font-size: 24px; color: #fff; margin-bottom: 20px; text-align: center; }
-.panel-close {
-  position: absolute; top: 10px; right: 10px; color: #fff; font-size: 28px;
-  cursor: pointer; opacity: 0.9; background: rgba(255,60,60,0.5); border: 2px solid rgba(255,255,255,0.4);
-  width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  z-index: 110; line-height: 1; padding: 0;
-}
-.panel-close:hover { opacity: 1; background: rgba(255,60,60,0.8); }
 
-.upgrade-item {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 12px 15px; margin: 8px 0; border-radius: 12px;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-  transition: all 0.2s;
-}
-.upgrade-item:hover { background: rgba(255,255,255,0.1); }
-.upgrade-name { color: #fff; font-weight: 600; }
-.upgrade-desc { color: rgba(255,255,255,0.6); font-size: 12px; }
-.upgrade-cost {
-  padding: 6px 16px; border-radius: 15px; border: none;
-  background: linear-gradient(135deg, #FFD700, #FFA000); color: #333;
-  font-weight: bold; cursor: pointer; font-size: 13px; white-space: nowrap;
-}
-.upgrade-cost:hover { transform: scale(1.05); }
-.upgrade-cost:disabled { opacity: 0.4; cursor: not-allowed; }
-.upgrade-maxed { color: #4CAF50; font-size: 13px; font-weight: 600; }
-
-.panel-backdrop {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 99;
-}
-#skill-panel { min-width: 600px; }
-.skill-tree-container { position: relative; width: 540px; height: 480px; margin: 0 auto; }
-.skill-node {
-  position: absolute; width: 56px; height: 56px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: all 0.3s; font-size: 11px; font-weight: 600;
-  text-align: center; color: #fff; line-height: 1.1; padding: 4px;
-}
-.skill-node.locked { background: rgba(100,100,100,0.6); border: 2px solid #666; }
-.skill-node.available { background: rgba(255,200,0,0.3); border: 2px solid #FFD700; animation: pulse 2s infinite; }
-.skill-node.unlocked { background: rgba(76,175,80,0.6); border: 2px solid #4CAF50; box-shadow: 0 0 15px rgba(76,175,80,0.5); }
-@keyframes pulse { 0%,100% { box-shadow: 0 0 5px rgba(255,215,0,0.3); } 50% { box-shadow: 0 0 20px rgba(255,215,0,0.6); } }
-.skill-node .cost { font-size: 9px; opacity: 0.8; display: block; }
-.skill-branch-line {
-  position: absolute; background: #555; z-index: -1;
-}
-.skill-branch-line.active { background: #4CAF50; box-shadow: 0 0 8px rgba(76,175,80,0.4); }
-.branch-label { position: absolute; color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 600; }
-
-#game-over {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200;
-  display: none; flex-direction: column; align-items: center; justify-content: center;
-  backdrop-filter: blur(10px);
-}
-#game-over h1 { font-size: 48px; color: #c62828; margin-bottom: 10px; text-shadow: 0 0 20px rgba(198,40,40,0.5); }
-#game-over .stats { color: rgba(255,255,255,0.8); font-size: 16px; margin: 5px 0; }
-#game-over .quote { color: rgba(255,255,255,0.5); font-style: italic; margin: 20px 0; font-size: 14px; max-width: 400px; text-align: center; }
-#retry-btn {
-  margin-top: 20px; padding: 15px 40px; border-radius: 30px; border: 2px solid #4CAF50;
-  background: rgba(76,175,80,0.3); color: #fff; font-size: 18px; cursor: pointer;
-  transition: all 0.3s;
-}
-#retry-btn:hover { background: rgba(76,175,80,0.6); transform: scale(1.05); }
-
-/* Aphid minigame - screen overlay */
-#aphid-overlay {
-  position: fixed; inset: 0; z-index: 50; pointer-events: none; display: none;
-}
-#aphid-overlay.active { pointer-events: auto; display: block; }
-#aphid-timer {
-  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  font-size: 72px; font-weight: bold; color: #ff4444; z-index: 55;
-  text-shadow: 0 0 20px rgba(255,0,0,0.8), 2px 2px 4px rgba(0,0,0,0.8);
-  pointer-events: none; display: none;
-}
-#aphid-count {
-  position: fixed; top: 45%; left: 50%; transform: translate(-50%, -100%);
-  font-size: 20px; color: #fff; z-index: 55; pointer-events: none; display: none;
-  text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
-}
-#aphid-result {
-  position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%);
-  font-size: 36px; font-weight: bold; z-index: 55; pointer-events: none; display: none;
-  text-shadow: 0 0 15px currentColor, 2px 2px 4px rgba(0,0,0,0.8);
-  animation: floatUp 1.5s ease-out forwards;
-}
-.aphid-sprite {
-  position: fixed; z-index: 52; width: 44px; height: 44px; font-size: 32px;
-  cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: center;
-  transition: transform 0.1s; pointer-events: auto; -webkit-tap-highlight-color: transparent;
-}
-.aphid-sprite:active { transform: scale(0.6); }
-.aphid-sprite.squashed { pointer-events: none; opacity: 0.4; transform: scale(0.3) rotate(45deg); transition: all 0.3s; }
-
-/* Event banners */
-#event-banner {
-  position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
-  padding: 12px 30px; border-radius: 16px; font-size: 22px; font-weight: bold;
-  color: #fff; z-index: 60; pointer-events: none; display: none;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.7); animation: bannerPop 0.4s ease-out;
+#leaf-counter {
+  font-size: 1.6em;
+  font-weight: 700;
+  color: var(--green-bright);
+  text-shadow: 0 0 12px rgba(106, 220, 106, 0.4);
+  transition: transform 0.1s;
   white-space: nowrap;
 }
-@keyframes bannerPop { 0% { transform: translateX(-50%) scale(0.5); opacity: 0; } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
 
-/* Screen effects */
-#screen-border-effect {
-  position: fixed; inset: 0; z-index: 45; pointer-events: none; display: none;
-}
-#rainbow-overlay {
-  position: fixed; top: 0; left: 0; right: 0; height: 80px; z-index: 45; pointer-events: none; display: none;
-  background: linear-gradient(180deg, rgba(255,0,0,0.15), rgba(255,165,0,0.12), rgba(255,255,0,0.1), rgba(0,128,0,0.1), rgba(0,0,255,0.1), rgba(75,0,130,0.08), transparent);
-}
-#sparkle-container { position: fixed; inset: 0; z-index: 45; pointer-events: none; display: none; }
-.sparkle {
-  position: absolute; width: 8px; height: 8px; border-radius: 50%;
-  background: radial-gradient(circle, #FFD700, transparent);
-  animation: sparkleAnim 1s ease-out infinite;
-}
-@keyframes sparkleAnim { 0% { transform: scale(0); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.8; } 100% { transform: scale(0); opacity: 0; } }
-
-/* Sound unmute button (prominent) */
-#unmute-btn {
-  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
-  z-index: 15; padding: 10px 24px; border-radius: 25px;
-  border: 2px solid rgba(255,255,255,0.4); background: rgba(76,175,80,0.7);
-  color: #fff; font-size: 16px; font-weight: bold; cursor: pointer;
-  backdrop-filter: blur(10px); animation: pulse 2s infinite; display: none;
+#leaf-counter.pulse {
+  transform: scale(1.08);
 }
 
-#sound-toggle {
-  position: fixed; bottom: 30px; left: 50%; transform: translateX(80px);
-  z-index: 10; width: 40px; height: 40px; border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.3); background: rgba(100,100,100,0.5);
-  color: #fff; font-size: 18px; cursor: pointer; backdrop-filter: blur(10px);
+#lps-display {
+  font-size: 0.85em;
+  color: var(--text-dim);
+  margin-top: 2px;
 }
 
-#start-screen {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  backdrop-filter: blur(10px);
+#next-unlock {
+  font-size: 0.75em;
+  color: var(--gold);
+  text-align: right;
+  max-width: 45%;
+  line-height: 1.3;
 }
-#start-screen h1 { font-size: 52px; color: #4CAF50; margin-bottom: 10px; text-shadow: 0 0 30px rgba(76,175,80,0.5); }
-#start-screen p { color: rgba(255,255,255,0.6); font-size: 16px; margin-bottom: 30px; }
-#start-btn {
-  padding: 15px 50px; border-radius: 30px; border: 2px solid #4CAF50;
-  background: rgba(76,175,80,0.3); color: #fff; font-size: 20px; cursor: pointer;
-  transition: all 0.3s; animation: pulse 2s infinite;
+
+#main-area {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
 }
-#start-btn:hover { background: rgba(76,175,80,0.6); }
+
+/* Panels */
+.panel {
+  display: none;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px;
+  padding-bottom: 70px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.panel.active {
+  display: block;
+}
+
+#panel-click {
+  display: none;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+#panel-click.active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Bottom Nav */
+#bottom-nav {
+  flex-shrink: 0;
+  display: flex;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--green-1);
+  z-index: 100;
+}
+
+.nav-btn {
+  flex: 1;
+  min-height: 52px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 0.72em;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transition: color 0.2s, background 0.2s;
+  padding: 4px 2px;
+}
+
+.nav-btn.active {
+  color: var(--green-bright);
+  background: rgba(106, 220, 106, 0.08);
+}
+
+.nav-btn .nav-icon { font-size: 1.4em; }
+
+/* ===== CLICK AREA ===== */
+#click-target {
+  width: min(200px, 50vw);
+  height: min(200px, 50vw);
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--green-2), var(--green-1));
+  border: 3px solid var(--green-3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: min(80px, 20vw);
+  transition: transform 0.08s, box-shadow 0.08s;
+  box-shadow: 0 0 30px rgba(106, 220, 106, 0.2);
+  position: relative;
+  z-index: 10;
+}
+
+#click-target:active {
+  transform: scale(0.93);
+  box-shadow: 0 0 50px rgba(106, 220, 106, 0.5);
+}
+
+#click-power-label {
+  font-size: 0.85em;
+  color: var(--text-dim);
+  margin-top: 12px;
+}
+
+/* Floating numbers */
+.float-number {
+  position: absolute;
+  color: var(--green-bright);
+  font-weight: 700;
+  font-size: 1.2em;
+  pointer-events: none;
+  z-index: 50;
+  animation: floatUp 1s ease-out forwards;
+  text-shadow: 0 0 6px rgba(106, 220, 106, 0.6);
+}
+
+@keyframes floatUp {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-80px) scale(0.6); }
+}
+
+/* Falling leaves background */
+.falling-leaf {
+  position: absolute;
+  font-size: 1.2em;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 1;
+  animation: fall linear forwards;
+}
+
+@keyframes fall {
+  0% { transform: translateY(-20px) rotate(0deg); opacity: 0.35; }
+  100% { transform: translateY(calc(100vh + 20px)) rotate(720deg); opacity: 0; }
+}
+
+/* ===== GENERATORS ===== */
+.gen-card {
+  background: var(--bg-card);
+  border: 1px solid var(--green-1);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: border-color 0.2s;
+}
+
+.gen-card.locked {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.gen-card.affordable {
+  border-color: var(--green-3);
+}
+
+.gen-icon {
+  font-size: 2em;
+  width: 48px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.gen-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.gen-name {
+  font-weight: 700;
+  font-size: 0.95em;
+  color: var(--text-bright);
+}
+
+.gen-detail {
+  font-size: 0.75em;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.gen-buy-btn {
+  min-width: 80px;
+  min-height: 44px;
+  border: none;
+  border-radius: 8px;
+  background: var(--green-1);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 0.82em;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  padding: 6px 10px;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.gen-buy-btn.can-afford {
+  background: var(--green-2);
+}
+
+.gen-buy-btn.can-afford:active {
+  transform: scale(0.95);
+  background: var(--green-3);
+}
+
+/* ===== UPGRADES ===== */
+.upgrade-card {
+  background: var(--bg-card);
+  border: 1px solid var(--green-1);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, opacity 0.3s;
+}
+
+.upgrade-card.purchased {
+  opacity: 0.5;
+  pointer-events: none;
+  border-color: var(--green-3);
+}
+
+.upgrade-card.affordable {
+  border-color: var(--gold-dark);
+}
+
+.upgrade-card.cooldown {
+  border-color: var(--blue);
+}
+
+.upgrade-name {
+  font-weight: 700;
+  font-size: 0.95em;
+  color: var(--gold);
+}
+
+.upgrade-desc {
+  font-size: 0.78em;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+.upgrade-cost {
+  font-size: 0.82em;
+  color: var(--green-bright);
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+/* ===== PRESTIGE ===== */
+#panel-prestige {
+  text-align: center;
+  display: none;
+  padding-top: 40px;
+}
+
+#panel-prestige.active { display: block; }
+
+.prestige-info {
+  margin: 20px auto;
+  max-width: 360px;
+}
+
+.prestige-info h2 {
+  color: var(--purple);
+  font-size: 1.5em;
+  margin-bottom: 10px;
+}
+
+.prestige-info p {
+  color: var(--text-dim);
+  font-size: 0.9em;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.prestige-btn {
+  min-height: 54px;
+  min-width: 200px;
+  border: 2px solid var(--purple);
+  border-radius: 12px;
+  background: rgba(170, 102, 255, 0.1);
+  color: var(--purple);
+  font-weight: 700;
+  font-size: 1.1em;
+  cursor: pointer;
+  margin: 20px auto;
+  padding: 12px 24px;
+  transition: all 0.3s;
+}
+
+.prestige-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.prestige-btn:not(:disabled) {
+  animation: prestigeGlow 2s ease-in-out infinite;
+}
+
+@keyframes prestigeGlow {
+  0%, 100% { box-shadow: 0 0 10px rgba(170, 102, 255, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(170, 102, 255, 0.6); }
+}
+
+.essence-upgrade {
+  background: var(--bg-card);
+  border: 1px solid var(--purple);
+  border-radius: 10px;
+  padding: 12px;
+  margin: 8px auto;
+  max-width: 360px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.essence-upgrade.purchased {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.essence-upgrade-name {
+  color: var(--purple);
+  font-weight: 700;
+}
+
+.essence-upgrade-desc {
+  color: var(--text-dim);
+  font-size: 0.8em;
+  margin-top: 4px;
+}
+
+.essence-upgrade-cost {
+  color: var(--purple);
+  font-size: 0.85em;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+/* ===== STATS ===== */
+#panel-stats .stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 4px;
+  border-bottom: 1px solid rgba(106, 220, 106, 0.1);
+  font-size: 0.9em;
+}
+
+.stat-label { color: var(--text-dim); }
+.stat-value { color: var(--text-bright); font-weight: 600; }
+
+.stats-section-title {
+  color: var(--green-bright);
+  font-weight: 700;
+  font-size: 1em;
+  margin: 16px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--green-1);
+}
+
+.danger-btn {
+  min-height: 44px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--danger);
+  font-weight: 600;
+  font-size: 0.85em;
+  cursor: pointer;
+  padding: 10px 20px;
+  margin-top: 20px;
+  width: 100%;
+}
+
+/* ===== EVENT BANNER ===== */
+#event-banner {
+  display: none;
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 215, 0, 0.15);
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+  padding: 8px 16px;
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 0.85em;
+  z-index: 90;
+  text-align: center;
+  max-width: 90%;
+  animation: bannerPulse 1s ease-in-out infinite;
+}
+
+@keyframes bannerPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 215, 0, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+}
+
+/* Golden Leaf */
+#golden-leaf {
+  display: none;
+  position: absolute;
+  font-size: 3em;
+  cursor: pointer;
+  z-index: 80;
+  animation: goldenSpin 2s linear infinite;
+  filter: drop-shadow(0 0 10px gold);
+}
+
+@keyframes goldenSpin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.2); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+/* ===== MILESTONE TOAST ===== */
+#milestone-toast {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  border: 2px solid var(--gold);
+  border-radius: 16px;
+  padding: 24px 32px;
+  z-index: 200;
+  text-align: center;
+  animation: toastIn 0.3s ease-out;
+}
+
+@keyframes toastIn {
+  from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+#milestone-toast .toast-title {
+  color: var(--gold);
+  font-size: 1.3em;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+#milestone-toast .toast-desc {
+  color: var(--text);
+  font-size: 0.9em;
+}
+
+/* ===== OFFLINE MODAL ===== */
+#offline-modal {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+}
+
+#offline-modal.show {
+  display: flex;
+}
+
+.offline-box {
+  background: var(--bg-panel);
+  border: 2px solid var(--green-2);
+  border-radius: 16px;
+  padding: 30px;
+  text-align: center;
+  max-width: 340px;
+  margin: 20px;
+}
+
+.offline-box h2 {
+  color: var(--green-bright);
+  margin-bottom: 12px;
+}
+
+.offline-box p {
+  color: var(--text);
+  font-size: 0.95em;
+  margin-bottom: 8px;
+}
+
+.offline-box .earned {
+  color: var(--gold);
+  font-size: 1.4em;
+  font-weight: 700;
+  margin: 12px 0;
+}
+
+.offline-box button {
+  min-height: 44px;
+  min-width: 120px;
+  border: none;
+  border-radius: 8px;
+  background: var(--green-2);
+  color: var(--text-bright);
+  font-weight: 700;
+  font-size: 1em;
+  cursor: pointer;
+  margin-top: 12px;
+}
+
+/* ===== VISUAL BACKGROUND ===== */
+#bg-scene {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 0;
+  pointer-events: none;
+  transition: background 2s;
+}
+
+/* ===== SCROLLBAR ===== */
+.panel::-webkit-scrollbar { width: 4px; }
+.panel::-webkit-scrollbar-track { background: transparent; }
+.panel::-webkit-scrollbar-thumb { background: var(--green-1); border-radius: 4px; }
+
+/* ===== MILESTONE BADGES ===== */
+.milestone-badge {
+  display: inline-block;
+  background: var(--gold);
+  color: #000;
+  font-size: 0.65em;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* Buy amount selector */
+#buy-amount-bar {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px 4px;
+}
+
+.buy-amt-btn {
+  flex: 1;
+  min-height: 36px;
+  border: 1px solid var(--green-1);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 0.8em;
+  cursor: pointer;
+}
+
+.buy-amt-btn.active {
+  background: var(--green-1);
+  color: var(--text-bright);
+  border-color: var(--green-3);
+}
 </style>
 </head>
 <body>
+<div id="app">
+  <!-- TOP BAR -->
+  <div id="top-bar">
+    <div>
+      <div id="leaf-counter">🍂 0 Leaves</div>
+      <div id="lps-display">0 leaves/sec</div>
+    </div>
+    <div id="next-unlock"></div>
+  </div>
 
-<div id="start-screen">
-  <h1>🍃 Leaf Life</h1>
-  <p>Survive the seasons. Grow. Photosynthesize.</p>
-  <button id="start-btn" onclick="startGame()">🌱 Begin</button>
+  <!-- MAIN AREA -->
+  <div id="main-area">
+    <div id="bg-scene"></div>
+    <div id="event-banner"></div>
+    <div id="golden-leaf" onclick="Game.clickGoldenLeaf()">🍂</div>
+
+    <!-- Click Panel -->
+    <div id="panel-click" class="active">
+      <div id="click-target" onclick="Game.manualClick(event)">🍃</div>
+      <div id="click-power-label">+1 per click</div>
+    </div>
+
+    <!-- Generators Panel -->
+    <div id="panel-generators" class="panel">
+      <div id="buy-amount-bar">
+        <button class="buy-amt-btn active" onclick="Game.setBuyAmount(1)">×1</button>
+        <button class="buy-amt-btn" onclick="Game.setBuyAmount(10)">×10</button>
+        <button class="buy-amt-btn" onclick="Game.setBuyAmount(100)">×100</button>
+        <button class="buy-amt-btn" onclick="Game.setBuyAmount(-1)">Max</button>
+      </div>
+      <div id="gen-list"></div>
+    </div>
+
+    <!-- Upgrades Panel -->
+    <div id="panel-upgrades" class="panel">
+      <div id="upgrade-list"></div>
+    </div>
+
+    <!-- Prestige Panel -->
+    <div id="panel-prestige" class="panel">
+      <div class="prestige-info">
+        <h2>🌿 Nature's Reset</h2>
+        <div id="essence-display"></div>
+        <p>Reset your forest to earn <strong style="color:var(--purple)">Nature Essence</strong> — a permanent currency that persists across resets.</p>
+        <p id="prestige-gain-text"></p>
+        <button class="prestige-btn" id="prestige-btn" onclick="Game.prestige()" disabled>Reset Forest</button>
+      </div>
+      <div class="stats-section-title" style="max-width:360px;margin-left:auto;margin-right:auto;">Essence Upgrades</div>
+      <div id="essence-upgrades-list"></div>
+    </div>
+
+    <!-- Stats Panel -->
+    <div id="panel-stats" class="panel">
+      <div class="stats-section-title">Production</div>
+      <div id="stats-production"></div>
+      <div class="stats-section-title">Totals</div>
+      <div id="stats-totals"></div>
+      <div class="stats-section-title">Milestones</div>
+      <div id="stats-milestones"></div>
+      <div class="stats-section-title">Prestige</div>
+      <div id="stats-prestige"></div>
+      <div class="stats-section-title">Danger Zone</div>
+      <button class="danger-btn" onclick="Game.hardReset()">🗑️ Hard Reset (Delete Everything)</button>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div id="bottom-nav">
+    <button class="nav-btn active" onclick="Game.switchPanel('click')" data-panel="click">
+      <span class="nav-icon">👆</span>Click
+    </button>
+    <button class="nav-btn" onclick="Game.switchPanel('generators')" data-panel="generators">
+      <span class="nav-icon">🌱</span>Generators
+    </button>
+    <button class="nav-btn" onclick="Game.switchPanel('upgrades')" data-panel="upgrades">
+      <span class="nav-icon">⬆️</span>Upgrades
+    </button>
+    <button class="nav-btn" onclick="Game.switchPanel('prestige')" data-panel="prestige">
+      <span class="nav-icon">✨</span>Prestige
+    </button>
+    <button class="nav-btn" onclick="Game.switchPanel('stats')" data-panel="stats">
+      <span class="nav-icon">📊</span>Stats
+    </button>
+  </div>
 </div>
 
-<div id="hud">
-  <div id="sugar-display"><span class="icon">🍬</span> <span id="sugar-count">0</span><span id="sugar-per-sec"></span></div>
+<!-- Milestone Toast -->
+<div id="milestone-toast">
+  <div class="toast-title"></div>
+  <div class="toast-desc"></div>
 </div>
 
-<div id="sky-arc">
-  <div id="sky-arc-icon">☀️</div>
-</div>
-<div id="quota-display">Quota: 0 / 0</div>
-
-<div id="status-bar">
-  <div class="status-pill" id="season-pill">🌸 Spring</div>
-  <div class="status-pill" id="weather-pill">☀️ Sunny</div>
-  <div class="status-pill" id="event-pill">🐛 Event</div>
-  <div class="status-pill" id="cycle-pill">Cycle 1</div>
-</div>
-
-<button id="photo-btn" onclick="doPhotosynthesis(event)">☀️<br>Click!</button>
-<button id="sound-toggle" onclick="toggleSound()">🔊</button>
-
-<div id="aphid-overlay"></div>
-<div id="aphid-timer"></div>
-<div id="aphid-count"></div>
-<div id="aphid-result"></div>
-<div id="event-banner"></div>
-<div id="screen-border-effect"></div>
-<div id="rainbow-overlay"></div>
-<div id="sparkle-container"></div>
-<button id="unmute-btn" onclick="enableSound()">🔊 Tap to Enable Sound</button>
-<button id="shop-btn" onclick="toggleShop()">🛒 Shop</button>
-<button id="skill-btn" onclick="toggleSkills()">🌳 Skills</button>
-
-<div id="shop-backdrop" class="panel-backdrop" onclick="closeShop()" style="display:none;"></div>
-<div id="shop-panel">
-  <button class="panel-close" onclick="closeShop()">✕</button>
-  <div class="panel-title">🛒 Sugar Shop</div>
-  <div id="shop-items"></div>
+<!-- Offline Modal -->
+<div id="offline-modal">
+  <div class="offline-box">
+    <h2>🌙 Welcome Back!</h2>
+    <p>While you were away, your forest generated:</p>
+    <div class="earned" id="offline-earned"></div>
+    <p id="offline-time"></p>
+    <button onclick="Game.dismissOffline()">Collect!</button>
+  </div>
 </div>
 
-<div id="skill-backdrop" class="panel-backdrop" onclick="closeSkills()" style="display:none;"></div>
-<div id="skill-panel">
-  <button class="panel-close" onclick="closeSkills()">✕</button>
-  <div class="panel-title">🌳 Skill Tree</div>
-  <div class="skill-tree-container" id="skill-tree"></div>
-</div>
-
-<div id="game-over">
-  <h1>🍂 Leaf Fallen</h1>
-  <div class="stats" id="go-cycles"></div>
-  <div class="stats" id="go-sugar"></div>
-  <div class="stats" id="go-season"></div>
-  <div class="quote" id="go-quote"></div>
-  <button id="retry-btn" onclick="restartGame()">🌱 Try Again</button>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// ============ ORBIT CONTROLS (inline mini-implementation) ============
-class SimpleOrbitControls {
-  constructor(camera, domElement) {
-    this.camera = camera;
-    this.domElement = domElement;
-    this.target = new THREE.Vector3(0, 3, 0);
-    this.spherical = new THREE.Spherical();
-    this.sphericalDelta = new THREE.Spherical();
-    this.rotateSpeed = 0.005;
-    this.isDragging = false;
-    this.lastMouse = { x: 0, y: 0 };
-    this.minPolar = 0.2;
-    this.maxPolar = Math.PI / 2 - 0.05;
-    this.minDist = 8;
-    this.maxDist = 40;
-
-    // Init spherical from camera position
-    const offset = new THREE.Vector3().subVectors(camera.position, this.target);
-    this.spherical.setFromVector3(offset);
-
-    domElement.addEventListener('pointerdown', e => {
-      if (e.button === 0) { this.isDragging = true; this.lastMouse = { x: e.clientX, y: e.clientY }; }
-    });
-    domElement.addEventListener('pointermove', e => {
-      if (!this.isDragging) return;
-      const dx = e.clientX - this.lastMouse.x;
-      const dy = e.clientY - this.lastMouse.y;
-      this.spherical.theta -= dx * this.rotateSpeed;
-      this.spherical.phi = Math.max(this.minPolar, Math.min(this.maxPolar, this.spherical.phi + dy * this.rotateSpeed));
-      this.lastMouse = { x: e.clientX, y: e.clientY };
-    });
-    domElement.addEventListener('pointerup', () => { this.isDragging = false; });
-    domElement.addEventListener('wheel', e => {
-      this.spherical.radius = Math.max(this.minDist, Math.min(this.maxDist, this.spherical.radius + e.deltaY * 0.02));
-      e.preventDefault();
-    }, { passive: false });
-  }
-  update() {
-    const offset = new THREE.Vector3().setFromSpherical(this.spherical);
-    this.camera.position.copy(this.target).add(offset);
-    this.camera.lookAt(this.target);
-  }
-}
-
-// ============ GAME STATE ============
-const G = {
-  sugar: 0, totalSugar: 0, sugarThisCycle: 0,
-  cycle: 1, timer: 60, quota: 10,
-  season: 'spring', seasonTimer: 0, seasonIndex: 0,
-  weather: 'sunny', weatherTimer: 0, weatherDuration: 0,
-  event: null, eventTimer: 0, eventDuration: 0, nextEventIn: 0,
-  clickPower: 1, passiveGen: 0, weatherResist: 0,
-  alive: true, started: false, gameOver: false,
-  leafHealth: 1, leafScale: 1,
-  aphidDamageCycles: 0, aphidProductionMult: 1,
-  upgrades: {
-    cuticle: { level: 0, max: 5, baseCost: 15, costMult: 2.5, desc: '+1 sugar/click', icon: '🛡️' },
-    chloro: { level: 0, max: 5, baseCost: 30, costMult: 2.5, desc: '+1 passive sugar/sec', icon: '🧬' },
-    weatherRes: { level: 0, max: 3, baseCost: 50, costMult: 2.5, desc: '-25% weather penalty', icon: '🌂' },
+// ===== SOUND ENGINE =====
+const Sound = {
+  ctx: null,
+  init() {
+    if (this.ctx) return;
+    try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
   },
-  skills: {},
-  deathQuotes: [
-    "Every leaf must fall... but not every leaf is forgotten.",
-    "You photosynthesized with honor.",
-    "The tree remembers your contribution.",
-    "In the cycle of life, you played your part beautifully.",
-    "A brave leaf in a harsh world.",
-    "The wind takes us all eventually.",
-    "You were the greenest of them all.",
-    "Nature is beautiful and cruel in equal measure.",
-  ],
+  play(type) {
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      if (type === 'click') {
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(400, now + 0.08);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        osc.start(now); osc.stop(now + 0.1);
+      } else if (type === 'buy') {
+        osc.frequency.setValueAtTime(523, now);
+        osc.frequency.setValueAtTime(659, now + 0.06);
+        osc.frequency.setValueAtTime(784, now + 0.12);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.start(now); osc.stop(now + 0.2);
+      } else if (type === 'milestone') {
+        const osc2 = this.ctx.createOscillator();
+        const gain2 = this.ctx.createGain();
+        osc2.connect(gain2); gain2.connect(this.ctx.destination);
+        osc.frequency.setValueAtTime(523, now);
+        osc.frequency.setValueAtTime(659, now + 0.15);
+        osc.frequency.setValueAtTime(784, now + 0.3);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+        osc.start(now); osc.stop(now + 0.6);
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(1047, now + 0.35);
+        gain2.gain.setValueAtTime(0.08, now + 0.35);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+        osc2.start(now + 0.35); osc2.stop(now + 0.7);
+      } else if (type === 'prestige') {
+        [523, 659, 784, 1047].forEach((f, i) => {
+          const o = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          o.type = 'sine';
+          o.connect(g); g.connect(this.ctx.destination);
+          o.frequency.setValueAtTime(f, now + i * 0.15);
+          g.gain.setValueAtTime(0.1, now + i * 0.15);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.4);
+          o.start(now + i * 0.15); o.stop(now + i * 0.15 + 0.4);
+        });
+      }
+    } catch(e) {}
+  }
 };
 
-const SEASONS = [
-  { name: 'spring', label: '🌸 Spring', mult: 1.0, ground: 0x4a8c3f, leafColors: [0x55cc55, 0x66dd44, 0x77ee55] },
-  { name: 'summer', label: '☀️ Summer', mult: 1.25, ground: 0x3d7a30, leafColors: [0x228822, 0x2d6b2d, 0x1a661a] },
-  { name: 'fall', label: '🍂 Fall', mult: 0.75, ground: 0x8c6c3f, leafColors: [0xdd6622, 0xcc4411, 0xddaa22, 0xbb3300] },
-  { name: 'winter', label: '❄️ Winter', mult: 0.5, ground: 0xaabbcc, leafColors: [0x887744, 0x665533] },
-];
-
-const WEATHERS = [
-  { name: 'sunny', label: '☀️ Sunny', mult: 1.0 },
-  { name: 'rain', label: '🌧️ Rain', mult: 1.5 },
-  { name: 'cold', label: '🥶 Cold', mult: 0.5 },
-  { name: 'heat', label: '🔥 Heat', mult: 0.5 },
-];
-
-const EVENTS = [
-  { name: 'aphid', label: '🐛 Aphid Attack!', mult: 1.0, duration: 12, minigame: true },
-  { name: 'pollinator', label: '🐝 Pollinator Visit!', mult: 1.5, duration: 10 },
-  { name: 'wind', label: '💨 Strong Wind!', mult: 0.8, duration: 12 },
-  { name: 'rainbow', label: '🌈 Rainbow!', mult: 1.75, duration: 10, rare: true },
-];
-
-const SKILL_TREE = [
-  { branch: 'photo', label: 'Photosynthesis', color: '#FFD700', nodes: [
-    { id: 'clickI', name: 'Click+I', cost: 50, effect: () => { G.clickPower += 1; }, desc: '+1 click power' },
-    { id: 'clickII', name: 'Click+II', cost: 150, effect: () => { G.clickPower += 2; }, desc: '+2 click power' },
-    { id: 'clickIII', name: 'Click+III', cost: 400, effect: () => { G.clickPower += 3; }, desc: '+3 click power' },
-    { id: 'overdrive', name: 'Overdrive', cost: 1000, effect: () => { G.passiveGen += 3; }, desc: '+3 passive/s' },
-  ]},
-  { branch: 'resilience', label: 'Resilience', color: '#2196F3', nodes: [
-    { id: 'coldI', name: 'Cold Res I', cost: 75, effect: () => { G.weatherResist += 0.15; }, desc: '+15% resist' },
-    { id: 'coldII', name: 'Cold Res II', cost: 200, effect: () => { G.weatherResist += 0.15; }, desc: '+15% resist' },
-    { id: 'coldIII', name: 'Cold Res III', cost: 500, effect: () => { G.weatherResist += 0.2; }, desc: '+20% resist' },
-    { id: 'evergreen', name: 'Evergreen', cost: 1200, effect: () => { G.skills.evergreen = true; }, desc: 'Immune to winter' },
-  ]},
-  { branch: 'growth', label: 'Growth', color: '#4CAF50', nodes: [
-    { id: 'thickI', name: 'Cuticle I', cost: 60, effect: () => { G.leafHealth += 0.2; }, desc: '+20% health' },
-    { id: 'thickII', name: 'Cuticle II', cost: 175, effect: () => { G.leafHealth += 0.2; }, desc: '+20% health' },
-    { id: 'bark', name: 'Bark Armor', cost: 450, effect: () => { G.leafHealth += 0.3; }, desc: '+30% health' },
-    { id: 'oak', name: 'Ancient Oak', cost: 1100, effect: () => { G.leafHealth += 0.5; G.leafScale += 0.3; }, desc: 'Massive health' },
-  ]},
-  { branch: 'cosmetic', label: 'Cosmetic', color: '#E040FB', nodes: [
-    { id: 'colorShift', name: 'Color Shift', cost: 100, effect: () => { G.skills.colorShift = true; }, desc: 'Leaf color changes' },
-    { id: 'species', name: 'Species', cost: 300, effect: () => { G.skills.species = true; }, desc: 'New leaf shape' },
-    { id: 'legendary', name: 'Legendary', cost: 800, effect: () => { G.skills.legendary = true; }, desc: 'Glowing leaf!' },
-  ]},
-];
-
-// ============ THREE.JS SETUP ============
-let scene, camera, renderer, controls;
-let dirLight, ambientLight, sunMesh, moonMesh, groundMesh;
-let leafGroup, leafMesh, leafGlow;
-let fallingLeaves = [], particles = [];
-let rainDrops = [], snowFlakes = [];
-let stars = [];
-let dyingLeaf = null;
-let forestTrees = [];
-
-function initScene() {
-  scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x88aacc, 0.012);
-
-  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
-  camera.position.set(0, 6, 18);
-
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
-  document.body.prepend(renderer.domElement);
-
-  controls = new SimpleOrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 3, 0);
-
-  // Lights
-  ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-  scene.add(ambientLight);
-
-  dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
-  dirLight.position.set(20, 30, 10);
-  dirLight.castShadow = true;
-  dirLight.shadow.mapSize.set(2048, 2048);
-  dirLight.shadow.camera.left = -30;
-  dirLight.shadow.camera.right = 30;
-  dirLight.shadow.camera.top = 30;
-  dirLight.shadow.camera.bottom = -10;
-  scene.add(dirLight);
-
-  // Sun sphere
-  const sunGeo = new THREE.SphereGeometry(2, 16, 16);
-  const sunMat = new THREE.MeshBasicMaterial({ color: 0xffee88 });
-  sunMesh = new THREE.Mesh(sunGeo, sunMat);
-  scene.add(sunMesh);
-
-  // Moon sphere
-  const moonGeo = new THREE.SphereGeometry(1.2, 16, 16);
-  const moonMat = new THREE.MeshBasicMaterial({ color: 0xddeeff });
-  moonMesh = new THREE.Mesh(moonGeo, moonMat);
-  scene.add(moonMesh);
-
-  // Stars
-  const starGeo = new THREE.BufferGeometry();
-  const starPositions = [];
-  for (let i = 0; i < 600; i++) {
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.random() * Math.PI * 0.45;
-    const r = 150 + Math.random() * 50;
-    starPositions.push(
-      r * Math.sin(phi) * Math.cos(theta),
-      r * Math.cos(phi) + 20,
-      r * Math.sin(phi) * Math.sin(theta)
-    );
+// ===== NUMBER FORMATTING =====
+function fmt(n) {
+  if (n < 0) return '-' + fmt(-n);
+  if (n < 1000) return Math.floor(n).toLocaleString();
+  const suffixes = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
+  const tier = Math.floor(Math.log10(Math.abs(n)) / 3);
+  if (tier === 0) return Math.floor(n).toLocaleString();
+  if (tier < suffixes.length) {
+    const scale = Math.pow(10, tier * 3);
+    const scaled = n / scale;
+    return (scaled < 10 ? scaled.toFixed(2) : scaled < 100 ? scaled.toFixed(1) : scaled.toFixed(0)) + suffixes[tier];
   }
-  starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
-  const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.5, transparent: true, opacity: 0 });
-  const starField = new THREE.Points(starGeo, starMat);
-  scene.add(starField);
-  stars = [starField];
-
-  // Ground
-  const groundGeo = new THREE.PlaneGeometry(200, 200);
-  const groundMat = new THREE.MeshLambertMaterial({ color: 0x4a8c3f });
-  groundMesh = new THREE.Mesh(groundGeo, groundMat);
-  groundMesh.rotation.x = -Math.PI / 2;
-  groundMesh.receiveShadow = true;
-  scene.add(groundMesh);
-
-  // Build forest
-  buildForest();
-
-  // Player leaf — floating in front center
-  leafGroup = new THREE.Group();
-  leafGroup.position.set(0, 4.5, 5);
-  scene.add(leafGroup);
-  createLeaf();
-
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
+  return n.toExponential(2);
 }
 
-// ============ FOREST GENERATION ============
-function buildForest() {
-  // Remove old trees
-  forestTrees.forEach(t => scene.remove(t));
-  forestTrees = [];
-
-  const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5d3c1a });
-  const darkTrunkMat = new THREE.MeshLambertMaterial({ color: 0x4a2e15 });
-
-  // Tree positions — spread around, clear center for player leaf
-  const treePositions = [];
-  for (let i = 0; i < 35; i++) {
-    let x, z;
-    do {
-      x = (Math.random() - 0.5) * 80;
-      z = (Math.random() - 0.5) * 80;
-    } while (Math.abs(x) < 4 && z > 0 && z < 10); // keep center clear
-    const scale = 0.6 + Math.random() * 0.8;
-    treePositions.push({ x, z, scale });
-  }
-
-  treePositions.forEach(tp => {
-    const group = new THREE.Group();
-    group.position.set(tp.x, 0, tp.z);
-
-    // Trunk
-    const height = 4 + tp.scale * 4;
-    const trunkGeo = new THREE.CylinderGeometry(0.2 * tp.scale, 0.4 * tp.scale, height, 6);
-    const trunk = new THREE.Mesh(trunkGeo, Math.random() > 0.5 ? trunkMat : darkTrunkMat);
-    trunk.position.y = height / 2;
-    trunk.castShadow = true;
-    group.add(trunk);
-
-    // Branches
-    const branchCount = 3 + Math.floor(Math.random() * 3);
-    for (let b = 0; b < branchCount; b++) {
-      const bLen = 1 + Math.random() * 1.5 * tp.scale;
-      const bGeo = new THREE.CylinderGeometry(0.04 * tp.scale, 0.1 * tp.scale, bLen, 5);
-      const branch = new THREE.Mesh(bGeo, trunkMat);
-      const angle = (b / branchCount) * Math.PI * 2 + Math.random();
-      const bh = height * 0.5 + Math.random() * height * 0.4;
-      branch.position.set(Math.cos(angle) * 0.5 * tp.scale, bh, Math.sin(angle) * 0.5 * tp.scale);
-      branch.rotation.z = Math.cos(angle) * 0.7;
-      branch.rotation.x = Math.sin(angle) * 0.4;
-      branch.castShadow = true;
-      group.add(branch);
-    }
-
-    // Crown foliage — multiple overlapping spheres
-    const crownColor = new THREE.Color(0x2d7a2d);
-    const crownCount = 2 + Math.floor(Math.random() * 3);
-    for (let c = 0; c < crownCount; c++) {
-      const s = (1.2 + Math.random() * 1.0) * tp.scale;
-      const crownMat = new THREE.MeshLambertMaterial({ color: crownColor.clone() });
-      const crown = new THREE.Mesh(new THREE.SphereGeometry(s, 6, 5), crownMat);
-      crown.position.set(
-        (Math.random() - 0.5) * 1.2 * tp.scale,
-        height * 0.85 + Math.random() * 1.5 * tp.scale,
-        (Math.random() - 0.5) * 1.2 * tp.scale
-      );
-      crown.castShadow = true;
-      crown.receiveShadow = true;
-      crown.userData.isCrown = true;
-      group.add(crown);
-    }
-
-    scene.add(group);
-    forestTrees.push(group);
-  });
+function fmtTime(seconds) {
+  if (seconds < 60) return Math.floor(seconds) + 's';
+  if (seconds < 3600) return Math.floor(seconds / 60) + 'm ' + Math.floor(seconds % 60) + 's';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return h + 'h ' + m + 'm';
 }
 
-function updateForestColors() {
-  const season = SEASONS[G.seasonIndex];
-  const seasonColors = {
-    spring: 0x44aa44,
-    summer: 0x2d7a2d,
-    fall: 0xbb6622,
-    winter: 0x667766,
-  };
-  const targetColor = new THREE.Color(seasonColors[season.name]);
+// ===== GAME =====
+const Game = {
+  // State
+  leaves: 0,
+  totalLeaves: 0,
+  totalLeavesAllTime: 0,
+  totalClicks: 0,
+  clickPower: 1,
+  buyAmount: 1,
+  activePanel: 'click',
+  startTime: Date.now(),
+  lastTick: Date.now(),
+  lastSave: Date.now(),
+  lastEventCheck: Date.now(),
+  nextEventTime: 0,
+  activeEvent: null,
+  eventEndTime: 0,
+  toastTimeout: null,
 
-  forestTrees.forEach(group => {
-    group.traverse(child => {
-      if (child.isMesh && child.userData.isCrown) {
-        child.material.color.lerp(targetColor, 0.02);
+  // Prestige
+  natureEssence: 0,
+  totalPrestiges: 0,
+  essenceUpgradesBought: [],
+
+  // Milestones achieved
+  milestonesAchieved: [],
+
+  // Generators: id, name, icon, baseCost, baseProduction, producesIndex (-1 = leaves), count, unlockCost
+  generators: [
+    { id: 'sapling',  name: 'Sapling',      icon: '🌱', baseCost: 10,      baseProduction: 1,    count: 0, unlockAt: 0 },
+    { id: 'tree',     name: 'Tree',          icon: '🌳', baseCost: 150,     baseProduction: 0.2,  count: 0, unlockAt: 10 },
+    { id: 'forest',   name: 'Forest',        icon: '🌲', baseCost: 5000,    baseProduction: 0.05, count: 0, unlockAt: 150 },
+    { id: 'grove',    name: 'Ancient Grove',  icon: '🏔️', baseCost: 200000,  baseProduction: 0.01, count: 0, unlockAt: 5000 },
+  ],
+
+  // Upgrades
+  upgrades: [
+    { id: 'photo',     name: 'Photosynthesis Boost', desc: 'All plant production ×3',                   cost: 500,    bought: false, type: 'multiplier' },
+    { id: 'wind',      name: 'Wind Gust',            desc: 'Click power ×5',                             cost: 2000,   bought: false, type: 'click' },
+    { id: 'harmony',   name: 'Forest Harmony',       desc: 'Each tree doubles sapling output',           cost: 10000,  bought: false, type: 'synergy' },
+    { id: 'surge',     name: 'Autumn Surge',         desc: '30s of ×10 production (5min cooldown)',      cost: 5000,   bought: false, type: 'active', cooldownEnd: 0, activeEnd: 0 },
+    { id: 'sunlight',  name: 'Sunlight Blessing',    desc: 'All production ×10',                         cost: 1e6,    bought: false, type: 'multiplier' },
+    { id: 'ancient',   name: 'Ancient Forest',       desc: 'All production ×50',                         cost: 1e9,    bought: false, type: 'multiplier' },
+  ],
+
+  // Essence Upgrades
+  essenceUpgrades: [
+    { id: 'e_speed',   name: 'Swift Growth',       desc: 'Start with 5 free saplings each run',  cost: 5 },
+    { id: 'e_multi2',  name: 'Essence Multiplier',  desc: 'All production ×2 permanently',         cost: 10 },
+    { id: 'e_click',   name: 'Essence Click',       desc: 'Click power ×3 permanently',            cost: 8 },
+    { id: 'e_cheap',   name: 'Bargain Roots',       desc: 'All generators 15% cheaper',            cost: 15 },
+    { id: 'e_multi5',  name: 'Deep Roots',          desc: 'All production ×5 permanently',         cost: 50 },
+    { id: 'e_offline', name: 'Dream Harvest',       desc: 'Offline cap → 24 hours',                cost: 20 },
+  ],
+
+  // Milestones
+  milestones: [
+    { id: 'm_sap10',    check: () => Game.generators[0].count >= 10,  name: '10 Saplings',     desc: 'Saplings ×2 speed',         reward: 'sapling_x2' },
+    { id: 'm_tree25',   check: () => Game.generators[1].count >= 25,  name: '25 Trees',        desc: 'Weather events unlocked',   reward: 'weather' },
+    { id: 'm_for50',    check: () => Game.generators[2].count >= 50,  name: '50 Forests',      desc: 'All production +300%',      reward: 'prod_x4' },
+    { id: 'm_any100',   check: () => Game.generators.some(g => g.count >= 100), name: '100 of any tier', desc: 'Visual upgrade!', reward: 'visual' },
+    { id: 'm_1m',       check: () => Game.totalLeavesAllTime >= 1e6,  name: '1M Total Leaves', desc: 'Click power ×2',            reward: 'click_x2' },
+    { id: 'm_1b',       check: () => Game.totalLeavesAllTime >= 1e9,  name: '1B Total Leaves', desc: 'All production ×2',         reward: 'prod_x2' },
+  ],
+
+  // Events
+  events: [
+    { id: 'golden',   name: '🍂 Golden Leaf!',     desc: 'Click the golden leaf for a massive bonus!', duration: 20 },
+    { id: 'windstorm', name: '🌪️ Windstorm!',       desc: 'Leaf production ×20!',                       duration: 25 },
+    { id: 'sunburst',  name: '☀️ Sunlight Burst!',   desc: 'All production ×10!',                        duration: 20 },
+    { id: 'rain',      name: '🌧️ Rain Shower!',      desc: 'Production ×5 for 30 seconds!',              duration: 30 },
+  ],
+
+  // ===== INIT =====
+  init() {
+    this.load();
+    this.scheduleNextEvent();
+    this.renderGenerators();
+    this.renderUpgrades();
+    this.renderEssenceUpgrades();
+    this.updateDisplay();
+    this.startFallingLeaves();
+
+    // Game loop
+    setInterval(() => this.tick(), 50);
+    // Save loop
+    setInterval(() => this.save(), 30000);
+    // Falling leaves
+    setInterval(() => this.spawnFallingLeaf(), 2000);
+
+    // Sound init on first interaction
+    document.addEventListener('pointerdown', () => Sound.init(), { once: true });
+  },
+
+  // ===== TICK =====
+  tick() {
+    const now = Date.now();
+    const dt = (now - this.lastTick) / 1000;
+    this.lastTick = now;
+
+    // Production
+    const lps = this.getLPS();
+    if (lps > 0) {
+      const earned = lps * dt;
+      this.leaves += earned;
+      this.totalLeaves += earned;
+      this.totalLeavesAllTime += earned;
+    }
+
+    // Tier production (trees produce saplings, forests produce trees, groves produce forests)
+    for (let i = this.generators.length - 1; i >= 1; i--) {
+      const gen = this.generators[i];
+      if (gen.count > 0) {
+        const prod = this.getGeneratorTierProduction(i);
+        this.generators[i - 1].count += prod * dt;
       }
-    });
-  });
-
-  if (groundMesh) {
-    groundMesh.material.color.lerp(new THREE.Color(season.ground), 0.02);
-  }
-}
-
-// ============ PLAYER LEAF ============
-function createLeaf() {
-  while (leafGroup.children.length) leafGroup.remove(leafGroup.children[0]);
-
-  // Proper leaf shape — pointed tip, wider middle, tapered base with slight asymmetry
-  const leafShape = new THREE.Shape();
-  // Start at stem base
-  leafShape.moveTo(0, -1.2);
-  // Right side — curves out then to pointed tip
-  leafShape.bezierCurveTo(0.15, -1.0, 0.5, -0.7, 0.85, -0.2);
-  leafShape.bezierCurveTo(1.0, 0.1, 0.9, 0.5, 0.7, 0.8);
-  leafShape.bezierCurveTo(0.45, 1.15, 0.15, 1.4, 0, 1.55); // pointed tip
-  // Left side — mirror back down
-  leafShape.bezierCurveTo(-0.15, 1.4, -0.45, 1.15, -0.7, 0.8);
-  leafShape.bezierCurveTo(-0.9, 0.5, -1.0, 0.1, -0.85, -0.2);
-  leafShape.bezierCurveTo(-0.5, -0.7, -0.15, -1.0, 0, -1.2);
-
-  const extrudeSettings = { depth: 0.04, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2 };
-  const leafGeo = new THREE.ExtrudeGeometry(leafShape, extrudeSettings);
-  const leafMat = new THREE.MeshPhongMaterial({
-    color: 0x33aa33,
-    emissive: 0x0a220a,
-    emissiveIntensity: 0.3,
-    side: THREE.DoubleSide,
-    shininess: 50,
-  });
-  leafMesh = new THREE.Mesh(leafGeo, leafMat);
-  leafMesh.castShadow = true;
-  leafMesh.userData.baseEmissive = 0x0a220a;
-  leafMesh.userData.baseEmissiveIntensity = 0.3;
-  leafGroup.add(leafMesh);
-
-  // Vein lines — central midrib + side veins
-  const veinMat = new THREE.MeshBasicMaterial({ color: 0x226622, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
-
-  // Central midrib (stem to tip)
-  const midribShape = new THREE.Shape();
-  midribShape.moveTo(-0.02, -1.2);
-  midribShape.lineTo(0.02, -1.2);
-  midribShape.lineTo(0.015, 1.5);
-  midribShape.lineTo(-0.015, 1.5);
-  midribShape.lineTo(-0.02, -1.2);
-  const midribGeo = new THREE.ShapeGeometry(midribShape);
-  const midrib = new THREE.Mesh(midribGeo, veinMat);
-  midrib.position.z = 0.06;
-  leafGroup.add(midrib);
-
-  // Side veins
-  const sideVeinPositions = [
-    { y: -0.5, len: 0.6, angle: 0.5 },
-    { y: -0.1, len: 0.75, angle: 0.45 },
-    { y: 0.3, len: 0.7, angle: 0.4 },
-    { y: 0.65, len: 0.55, angle: 0.35 },
-    { y: 0.95, len: 0.35, angle: 0.3 },
-  ];
-  sideVeinPositions.forEach(v => {
-    for (let side = -1; side <= 1; side += 2) {
-      const veinShape = new THREE.Shape();
-      veinShape.moveTo(0, 0);
-      veinShape.lineTo(side * v.len * Math.cos(v.angle), v.len * Math.sin(v.angle));
-      veinShape.lineTo(side * v.len * Math.cos(v.angle) - 0.01, v.len * Math.sin(v.angle) + 0.015);
-      veinShape.lineTo(0, 0.015);
-      const vGeo = new THREE.ShapeGeometry(veinShape);
-      const vMesh = new THREE.Mesh(vGeo, veinMat);
-      vMesh.position.set(0, v.y, 0.06);
-      leafGroup.add(vMesh);
     }
-  });
 
-  // Glow ring
-  const glowGeo = new THREE.RingGeometry(1.3, 1.7, 32);
-  const glowMat = new THREE.MeshBasicMaterial({ color: 0x66ff66, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
-  leafGlow = new THREE.Mesh(glowGeo, glowMat);
-  leafGlow.position.z = -0.1;
-  leafGroup.add(leafGlow);
-
-  // Stem — thicker, longer
-  const stemGeo = new THREE.CylinderGeometry(0.04, 0.06, 0.8, 5);
-  const stemMat = new THREE.MeshLambertMaterial({ color: 0x5d3c1a });
-  const stem = new THREE.Mesh(stemGeo, stemMat);
-  stem.position.y = -1.6;
-  leafGroup.add(stem);
-
-  // Always-visible point light on the leaf so it glows at night
-  const leafLight = new THREE.PointLight(0x66ff66, 1.5, 8);
-  leafLight.position.set(0, 0, 0.5);
-  leafGroup.add(leafLight);
-  leafGroup.userData.leafLight = leafLight;
-}
-
-// ============ DAY/NIGHT CYCLE ============
-function getDayPhase() {
-  // timer goes 60 → 0, so elapsed = 60 - timer
-  const elapsed = 60 - G.timer;
-  // 0=sunrise, 15=noon, 30=sunset, 45=midnight, 60=sunrise
-  return elapsed / 60; // 0..1
-}
-
-function updateDayNightCycle() {
-  const phase = getDayPhase(); // 0..1 through the day
-  // Map to angle: 0=sunrise(east), 0.25=noon(top), 0.5=sunset(west), 0.75=midnight(below)
-  const angle = phase * Math.PI * 2 - Math.PI / 2; // start at east
-
-  const sunRadius = 60;
-  const sunX = Math.cos(angle) * sunRadius;
-  const sunY = Math.sin(angle) * sunRadius;
-  sunMesh.position.set(sunX, sunY, -20);
-
-  // Moon is opposite
-  moonMesh.position.set(-sunX, -sunY, -20);
-
-  // Sun visibility
-  const sunAbove = sunY > -5;
-  sunMesh.visible = sunAbove;
-  moonMesh.visible = !sunAbove;
-
-  // Sky color based on sun height
-  const sunHeight = Math.sin(angle); // -1 to 1
-  let skyTop, skyBottom, fogColor;
-  let dirColor, dirIntensity, ambColor, ambIntensity;
-
-  if (sunHeight > 0.3) {
-    // Daytime — bright
-    const t = Math.min(1, (sunHeight - 0.3) / 0.5);
-    skyTop = lerpColor(0xf0a050, 0x4488dd, t);
-    skyBottom = lerpColor(0xffd0a0, 0xaaccff, t);
-    fogColor = lerpColor(0xddb878, 0x88aacc, t);
-    dirColor = lerpColor(0xffcc88, 0xffffff, t);
-    dirIntensity = 0.8 + t * 0.4;
-    ambColor = lerpColor(0xffe0b0, 0xccddff, t);
-    ambIntensity = 0.4 + t * 0.2;
-  } else if (sunHeight > -0.1) {
-    // Sunrise/sunset transition
-    const t = (sunHeight + 0.1) / 0.4; // 0 at -0.1, 1 at 0.3
-    skyTop = lerpColor(0x1a1a40, 0xf0a050, t);
-    skyBottom = lerpColor(0x2a2040, 0xffd0a0, t);
-    fogColor = lerpColor(0x333355, 0xddb878, t);
-    dirColor = lerpColor(0x4466aa, 0xffcc88, t);
-    dirIntensity = 0.1 + t * 0.7;
-    ambColor = lerpColor(0x223355, 0xffe0b0, t);
-    ambIntensity = 0.15 + t * 0.25;
-  } else {
-    // Night
-    const t = Math.min(1, (-0.1 - sunHeight) / 0.6);
-    skyTop = lerpColor(0x1a1a40, 0x0a0a20, t);
-    skyBottom = lerpColor(0x2a2040, 0x151530, t);
-    fogColor = lerpColor(0x333355, 0x111122, t);
-    dirColor = 0x4466aa;
-    dirIntensity = 0.1 - t * 0.05;
-    ambColor = lerpColor(0x223355, 0x111133, t);
-    ambIntensity = 0.15 - t * 0.05;
-  }
-
-  // Apply sky
-  updateSkyGradient(skyTop, skyBottom);
-  scene.fog.color.set(fogColor);
-
-  // Apply lighting
-  dirLight.color.set(dirColor);
-  dirLight.intensity = Math.max(0.05, dirIntensity);
-  dirLight.position.set(sunX * 0.5, Math.max(5, sunY), -10);
-
-  ambientLight.color.set(ambColor);
-  ambientLight.intensity = Math.max(0.1, ambIntensity);
-
-  // Stars opacity
-  const starOpacity = sunHeight < -0.05 ? Math.min(1, (-0.05 - sunHeight) / 0.3) : 0;
-  if (stars[0]) stars[0].material.opacity = starOpacity * 0.8;
-
-  // Tone mapping exposure
-  renderer.toneMappingExposure = sunHeight > 0 ? 1.0 + sunHeight * 0.3 : Math.max(0.3, 1.0 + sunHeight * 0.7);
-
-  // Boost leaf glow at night so it's always visible
-  if (leafMesh && leafGroup.userData.leafLight) {
-    const nightFactor = Math.max(0, -sunHeight); // 0 during day, up to 1 at night
-    leafMesh.material.emissiveIntensity = 0.3 + nightFactor * 0.7;
-    leafGroup.userData.leafLight.intensity = 0.5 + nightFactor * 2.5;
-  }
-
-  // Update HUD sun/moon arc
-  updateSkyArcHUD(phase);
-}
-
-function lerpColor(c1, c2, t) {
-  const color = new THREE.Color(c1);
-  color.lerp(new THREE.Color(c2), Math.max(0, Math.min(1, t)));
-  return color;
-}
-
-let skyCanvas, skyCtx, skyTexture;
-function updateSkyGradient(topColor, bottomColor) {
-  if (!skyCanvas) {
-    skyCanvas = document.createElement('canvas');
-    skyCanvas.width = 2;
-    skyCanvas.height = 256;
-    skyCtx = skyCanvas.getContext('2d');
-    skyTexture = new THREE.CanvasTexture(skyCanvas);
-  }
-  const top = topColor instanceof THREE.Color ? topColor : new THREE.Color(topColor);
-  const bot = bottomColor instanceof THREE.Color ? bottomColor : new THREE.Color(bottomColor);
-  const grad = skyCtx.createLinearGradient(0, 0, 0, 256);
-  grad.addColorStop(0, `rgb(${top.r*255|0},${top.g*255|0},${top.b*255|0})`);
-  grad.addColorStop(1, `rgb(${bot.r*255|0},${bot.g*255|0},${bot.b*255|0})`);
-  skyCtx.fillStyle = grad;
-  skyCtx.fillRect(0, 0, 2, 256);
-  skyTexture.needsUpdate = true;
-  scene.background = skyTexture;
-}
-
-function updateSkyArcHUD(phase) {
-  const icon = document.getElementById('sky-arc-icon');
-  const arcW = 380;
-  // Arc path: x goes 0→arcW, y is an inverted arc
-  const x = phase * arcW + 10;
-  const y = 50 - Math.sin(phase * Math.PI) * 45;
-  const isDay = phase < 0.5;
-  icon.textContent = isDay ? '☀️' : '🌙';
-  icon.style.left = x + 'px';
-  icon.style.top = y + 'px';
-  icon.style.filter = isDay ?
-    'drop-shadow(0 0 8px rgba(255,200,0,0.8))' :
-    'drop-shadow(0 0 8px rgba(150,180,255,0.8))';
-}
-
-// ============ FALLING LEAVES ============
-const leafGeoTemplate = (() => {
-  const s = new THREE.Shape();
-  s.moveTo(0, -0.3);
-  s.bezierCurveTo(0.2, -0.1, 0.25, 0.1, 0.12, 0.3);
-  s.bezierCurveTo(0.05, 0.38, -0.05, 0.38, -0.12, 0.3);
-  s.bezierCurveTo(-0.25, 0.1, -0.2, -0.1, 0, -0.3);
-  return new THREE.ExtrudeGeometry(s, { depth: 0.01, bevelEnabled: false });
-})();
-
-function spawnFallingLeaf() {
-  const season = SEASONS[G.seasonIndex];
-  const colors = season.leafColors;
-  const color = colors[Math.floor(Math.random() * colors.length)];
-  const mat = new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
-  const leaf = new THREE.Mesh(leafGeoTemplate, mat);
-  const scale = 0.5 + Math.random() * 0.8;
-  leaf.scale.setScalar(scale);
-  leaf.position.set(
-    (Math.random() - 0.5) * 60,
-    10 + Math.random() * 8,
-    (Math.random() - 0.5) * 60
-  );
-  leaf.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-  leaf.userData = {
-    windX: (Math.random() - 0.5) * 2,
-    windZ: (Math.random() - 0.5) * 1,
-    rotSpeed: (Math.random() - 0.5) * 3,
-    swayPhase: Math.random() * Math.PI * 2,
-    fallSpeed: 1 + Math.random() * 1.5,
-  };
-  scene.add(leaf);
-  fallingLeaves.push(leaf);
-}
-
-function updateFallingLeaves(dt) {
-  const season = SEASONS[G.seasonIndex];
-  const isWinter = season.name === 'winter';
-  const maxLeaves = isWinter ? 15 : 60;
-  const spawnRate = isWinter ? 0.3 : 1.5;
-
-  // Spawn
-  if (fallingLeaves.length < maxLeaves && Math.random() < spawnRate * dt * 10) {
-    spawnFallingLeaf();
-  }
-
-  const windEvent = G.event && G.event.name === 'wind';
-  const windBoost = windEvent ? 4 : 1;
-
-  for (let i = fallingLeaves.length - 1; i >= 0; i--) {
-    const leaf = fallingLeaves[i];
-    const ud = leaf.userData;
-    ud.swayPhase += dt * 2;
-
-    leaf.position.y -= ud.fallSpeed * dt;
-    leaf.position.x += (ud.windX + Math.sin(ud.swayPhase) * 0.5) * dt * windBoost;
-    leaf.position.z += (ud.windZ + Math.cos(ud.swayPhase * 0.7) * 0.3) * dt * windBoost;
-    leaf.rotation.x += ud.rotSpeed * dt;
-    leaf.rotation.z += ud.rotSpeed * 0.5 * dt;
-
-    if (leaf.position.y < -1 || Math.abs(leaf.position.x) > 50 || Math.abs(leaf.position.z) > 50) {
-      scene.remove(leaf);
-      fallingLeaves.splice(i, 1);
+    // Check surge
+    const surge = this.upgrades.find(u => u.id === 'surge');
+    if (surge.activeEnd && now > surge.activeEnd) {
+      surge.activeEnd = 0;
     }
-  }
-}
 
-// ============ GAME LOGIC ============
-let lastTime = 0;
-let nextWeatherIn = 15;
+    // Check event
+    if (this.activeEvent && now > this.eventEndTime) {
+      this.endEvent();
+    }
 
-function startGame() {
-  document.getElementById('start-screen').style.display = 'none';
-  G.started = true;
-  G.alive = true;
-  G.nextEventIn = 30 + Math.random() * 30;
-  nextWeatherIn = 15 + Math.random() * 15;
-  // Show unmute prompt if sound not yet enabled
-  if (!soundEnabled) {
-    document.getElementById('unmute-btn').style.display = 'block';
-  }
-  // Try to init audio on this user gesture
-  initAudio();
-  gameLoop(performance.now());
-}
+    // Trigger event
+    if (!this.activeEvent && now > this.nextEventTime && this.milestonesAchieved.includes('m_tree25')) {
+      this.triggerRandomEvent();
+    }
 
-function restartGame() {
-  Object.assign(G, {
-    sugar: 0, totalSugar: 0, sugarThisCycle: 0,
-    cycle: 1, timer: 60, quota: 10,
-    season: 'spring', seasonTimer: 0, seasonIndex: 0,
-    weather: 'sunny', weatherTimer: 0, weatherDuration: 0,
-    event: null, eventTimer: 0, eventDuration: 0, nextEventIn: 30 + Math.random() * 30,
-    clickPower: 1, passiveGen: 0, weatherResist: 0,
-    alive: true, gameOver: false, leafHealth: 1, leafScale: 1,
-    skills: {},
-    upgrades: {
-      cuticle: { level: 0, max: 5, baseCost: 15, costMult: 2.5, desc: '+1 sugar/click', icon: '🛡️' },
-      chloro: { level: 0, max: 5, baseCost: 30, costMult: 2.5, desc: '+1 passive sugar/sec', icon: '🧬' },
-      weatherRes: { level: 0, max: 3, baseCost: 50, costMult: 2.5, desc: '-25% weather penalty', icon: '🌂' },
-    },
-    aphidDamageCycles: 0, aphidProductionMult: 1,
-  });
-  SKILL_TREE.forEach(b => b.nodes.forEach(n => n.unlocked = false));
-  nextWeatherIn = 15 + Math.random() * 15;
-  document.getElementById('game-over').style.display = 'none';
+    // Check milestones
+    this.checkMilestones();
 
-  leafGroup.position.set(0, 4.5, 5);
-  leafGroup.rotation.set(0, 0, 0);
-  leafGroup.visible = true;
-  createLeaf();
-  if (dyingLeaf) { scene.remove(dyingLeaf); dyingLeaf = null; }
+    // Update display
+    this.updateDisplay();
+  },
 
-  // Clear falling leaves & cosmetics
-  fallingLeaves.forEach(l => scene.remove(l));
-  fallingLeaves = [];
-  clearSeasonalCosmetics();
-  lastSeasonForCosmetics = -1;
-  if (aphidGame.active) {
-    aphidGame.active = false;
-    aphidGame.aphids = [];
-    aphidGame.remaining = 0;
-    const overlay = document.getElementById('aphid-overlay');
-    overlay.classList.remove('active');
-    overlay.innerHTML = '';
-  }
-  hideEventEffects();
+  // ===== PRODUCTION CALCULATIONS =====
+  getLPS() {
+    // Saplings produce leaves
+    const sapCount = this.generators[0].count;
+    if (sapCount <= 0) return 0;
 
-  updateHUD();
-  gameLoop(performance.now());
-}
+    let baseProd = sapCount * this.generators[0].baseProduction;
 
-function gameLoop(now) {
-  if (!G.alive && !G.gameOver) return;
-  if (G.gameOver) return;
+    // Apply multipliers
+    baseProd *= this.getProductionMultiplier();
 
-  const dt = Math.min((now - (lastTime || now)) / 1000, 0.1);
-  lastTime = now;
+    // Sapling-specific multipliers
+    if (this.milestonesAchieved.includes('m_sap10')) baseProd *= 2;
 
-  if (G.alive) {
-    // Timer
-    G.timer -= dt;
-    if (G.timer <= 0) {
-      if (G.sugarThisCycle >= G.quota) {
-        G.cycle++;
-        G.timer = 60;
-        // Harder progression: steeper after cycle 10
-        if (G.cycle <= 10) {
-          G.quota = Math.floor(G.quota * 1.4 + 5);
-        } else {
-          G.quota = Math.floor(G.quota * 1.8 + 15);
-        }
-        G.sugarThisCycle = 0;
-        G.leafScale += 0.05;
-        leafGroup.scale.setScalar(G.leafScale);
-        // Aphid damage recovery
-        if (G.aphidDamageCycles > 0) {
-          G.aphidDamageCycles--;
-          if (G.aphidDamageCycles <= 0) {
-            G.aphidProductionMult = 1;
-            removeLeafHoles();
-          }
-        }
-      } else {
-        triggerDeath();
-        requestAnimationFrame(gameLoop);
+    // Forest Harmony: each tree doubles sapling output
+    if (this.upgrades.find(u => u.id === 'harmony').bought) {
+      baseProd *= Math.pow(2, Math.floor(this.generators[1].count));
+      // Cap at reasonable level to prevent Infinity
+      if (baseProd > 1e30) baseProd = 1e30;
+    }
+
+    return baseProd;
+  },
+
+  getGeneratorTierProduction(tierIndex) {
+    // How many of tier (tierIndex-1) does one of tier tierIndex produce per second
+    const gen = this.generators[tierIndex];
+    let prod = gen.count * gen.baseProduction;
+    prod *= this.getProductionMultiplier();
+    return prod;
+  },
+
+  getProductionMultiplier() {
+    let mult = 1;
+
+    // Upgrades
+    if (this.upgrades.find(u => u.id === 'photo').bought) mult *= 3;
+    if (this.upgrades.find(u => u.id === 'sunlight').bought) mult *= 10;
+    if (this.upgrades.find(u => u.id === 'ancient').bought) mult *= 50;
+
+    // Surge active
+    const surge = this.upgrades.find(u => u.id === 'surge');
+    if (surge.activeEnd && Date.now() < surge.activeEnd) mult *= 10;
+
+    // Milestones
+    if (this.milestonesAchieved.includes('m_for50')) mult *= 4;
+    if (this.milestonesAchieved.includes('m_1b')) mult *= 2;
+
+    // Active event
+    if (this.activeEvent) {
+      if (this.activeEvent.id === 'windstorm') mult *= 20;
+      if (this.activeEvent.id === 'sunburst') mult *= 10;
+      if (this.activeEvent.id === 'rain') mult *= 5;
+    }
+
+    // Essence permanent upgrades
+    if (this.essenceUpgradesBought.includes('e_multi2')) mult *= 2;
+    if (this.essenceUpgradesBought.includes('e_multi5')) mult *= 5;
+
+    return mult;
+  },
+
+  getClickPower() {
+    let power = 1;
+    if (this.upgrades.find(u => u.id === 'wind').bought) power *= 5;
+    if (this.milestonesAchieved.includes('m_1m')) power *= 2;
+    if (this.essenceUpgradesBought.includes('e_click')) power *= 3;
+
+    // Scale click power with production so it stays relevant
+    const lps = this.getLPS();
+    if (lps > 10) power += Math.floor(lps * 0.05);
+
+    return Math.max(1, Math.floor(power));
+  },
+
+  getGeneratorCost(index, amount) {
+    const gen = this.generators[index];
+    let baseCost = gen.baseCost;
+    if (this.essenceUpgradesBought.includes('e_cheap')) baseCost *= 0.85;
+
+    if (amount === 1) {
+      return Math.ceil(baseCost * Math.pow(1.15, gen.count));
+    }
+
+    // Total cost for buying 'amount'
+    let total = 0;
+    for (let i = 0; i < amount; i++) {
+      total += Math.ceil(baseCost * Math.pow(1.15, gen.count + i));
+    }
+    return total;
+  },
+
+  getMaxAffordable(index) {
+    const gen = this.generators[index];
+    let baseCost = gen.baseCost;
+    if (this.essenceUpgradesBought.includes('e_cheap')) baseCost *= 0.85;
+
+    let count = 0;
+    let total = 0;
+    let budget = this.leaves;
+    while (true) {
+      const next = Math.ceil(baseCost * Math.pow(1.15, gen.count + count));
+      if (total + next > budget) break;
+      total += next;
+      count++;
+      if (count > 10000) break;
+    }
+    return { count, cost: total };
+  },
+
+  // ===== ACTIONS =====
+  manualClick(event) {
+    Sound.init();
+    Sound.play('click');
+
+    const power = this.getClickPower();
+    this.leaves += power;
+    this.totalLeaves += power;
+    this.totalLeavesAllTime += power;
+    this.totalClicks++;
+    this.clickPower = power;
+
+    // Floating number
+    const rect = event.target.getBoundingClientRect();
+    const x = (event.clientX || event.touches?.[0]?.clientX || rect.left + rect.width / 2);
+    const y = (event.clientY || event.touches?.[0]?.clientY || rect.top);
+    this.spawnFloatingNumber(x, y, '+' + fmt(power));
+
+    // Pulse counter
+    const counter = document.getElementById('leaf-counter');
+    counter.classList.add('pulse');
+    setTimeout(() => counter.classList.remove('pulse'), 100);
+  },
+
+  spawnFloatingNumber(x, y, text) {
+    const el = document.createElement('div');
+    el.className = 'float-number';
+    el.textContent = text;
+    el.style.left = (x + (Math.random() * 40 - 20)) + 'px';
+    el.style.top = y + 'px';
+    document.getElementById('main-area').appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+  },
+
+  buyGenerator(index) {
+    const amount = this.buyAmount === -1 ? this.getMaxAffordable(index).count : this.buyAmount;
+    if (amount <= 0) return;
+
+    const cost = this.buyAmount === -1 ? this.getMaxAffordable(index).cost : this.getGeneratorCost(index, amount);
+    if (this.leaves < cost) return;
+
+    Sound.play('buy');
+    this.leaves -= cost;
+    this.generators[index].count += amount;
+    this.renderGenerators();
+  },
+
+  buyUpgrade(index) {
+    const upg = this.upgrades[index];
+    if (upg.bought && upg.type !== 'active') return;
+
+    if (upg.type === 'active') {
+      // Surge: toggle active
+      if (upg.bought) {
+        const now = Date.now();
+        if (upg.cooldownEnd && now < upg.cooldownEnd) return; // still on cooldown
+        if (upg.activeEnd && now < upg.activeEnd) return; // already active
+        // Activate
+        upg.activeEnd = now + 30000;
+        upg.cooldownEnd = now + 300000;
+        Sound.play('buy');
+        this.renderUpgrades();
         return;
       }
     }
 
-    // Season cycling (4 min total, 1 min each)
-    G.seasonTimer += dt;
-    if (G.seasonTimer >= 60) {
-      G.seasonTimer = 0;
-      G.seasonIndex = (G.seasonIndex + 1) % 4;
-      G.season = SEASONS[G.seasonIndex].name;
-    }
+    if (this.leaves < upg.cost) return;
+    Sound.play('buy');
+    this.leaves -= upg.cost;
+    upg.bought = true;
+    this.renderUpgrades();
+  },
 
-    // Weather
-    nextWeatherIn -= dt;
-    if (nextWeatherIn <= 0) {
-      const w = WEATHERS[Math.floor(Math.random() * WEATHERS.length)];
-      G.weather = w.name;
-      G.weatherDuration = 15 + Math.random() * 15;
-      G.weatherTimer = G.weatherDuration;
-      nextWeatherIn = 30 + Math.random() * 30;
-    }
-    if (G.weatherTimer > 0) {
-      G.weatherTimer -= dt;
-      if (G.weatherTimer <= 0) { G.weather = 'sunny'; G.weatherTimer = 0; }
-    }
+  // ===== EVENTS =====
+  scheduleNextEvent() {
+    // 5-15 minutes
+    this.nextEventTime = Date.now() + (5 + Math.random() * 10) * 60 * 1000;
+  },
 
-    // Events
-    G.nextEventIn -= dt;
-    if (G.nextEventIn <= 0 && !G.event && !aphidGame.active) {
-      let pool = EVENTS.filter(e => !e.rare || Math.random() < 0.3);
-      const ev = pool[Math.floor(Math.random() * pool.length)];
-      if (ev.minigame && ev.name === 'aphid') {
-        startAphidMinigame();
-        G.nextEventIn = 30 + Math.random() * 30;
-      } else {
-        G.event = ev;
-        G.eventDuration = ev.duration;
-        G.eventTimer = ev.duration;
-        G.nextEventIn = 30 + Math.random() * 30;
-        showEventBanner(ev.name);
+  triggerRandomEvent() {
+    const eventDef = this.events[Math.floor(Math.random() * this.events.length)];
+    this.activeEvent = eventDef;
+    this.eventEndTime = Date.now() + eventDef.duration * 1000;
+
+    const banner = document.getElementById('event-banner');
+    banner.textContent = eventDef.name + ' — ' + eventDef.desc;
+    banner.style.display = 'block';
+
+    if (eventDef.id === 'golden') {
+      const gl = document.getElementById('golden-leaf');
+      const mainArea = document.getElementById('main-area');
+      gl.style.left = (30 + Math.random() * (mainArea.clientWidth - 80)) + 'px';
+      gl.style.top = (60 + Math.random() * (mainArea.clientHeight - 160)) + 'px';
+      gl.style.display = 'block';
+    }
+  },
+
+  endEvent() {
+    this.activeEvent = null;
+    document.getElementById('event-banner').style.display = 'none';
+    document.getElementById('golden-leaf').style.display = 'none';
+    this.scheduleNextEvent();
+  },
+
+  clickGoldenLeaf() {
+    if (!this.activeEvent || this.activeEvent.id !== 'golden') return;
+    // Reward: 10 minutes worth of production or 1000, whichever is higher
+    const reward = Math.max(this.getLPS() * 600, 1000);
+    this.leaves += reward;
+    this.totalLeaves += reward;
+    this.totalLeavesAllTime += reward;
+    Sound.play('milestone');
+    this.showToast('🍂 Golden Leaf!', 'Collected ' + fmt(reward) + ' leaves!');
+    this.endEvent();
+  },
+
+  // ===== MILESTONES =====
+  checkMilestones() {
+    for (const ms of this.milestones) {
+      if (this.milestonesAchieved.includes(ms.id)) continue;
+      if (ms.check()) {
+        this.milestonesAchieved.push(ms.id);
+        Sound.play('milestone');
+        this.showToast('🏆 ' + ms.name, ms.desc);
       }
     }
-    if (G.event) {
-      G.eventTimer -= dt;
-      if (G.eventTimer <= 0) { G.event = null; hideEventEffects(); }
+  },
+
+  showToast(title, desc) {
+    const toast = document.getElementById('milestone-toast');
+    toast.querySelector('.toast-title').textContent = title;
+    toast.querySelector('.toast-desc').textContent = desc;
+    toast.style.display = 'block';
+    if (this.toastTimeout) clearTimeout(this.toastTimeout);
+    this.toastTimeout = setTimeout(() => { toast.style.display = 'none'; }, 3000);
+  },
+
+  // ===== PRESTIGE =====
+  getPrestigeEssence() {
+    // sqrt(totalLeaves / 1e9), minimum 1B total leaves to prestige
+    if (this.totalLeaves < 1e9) return 0;
+    return Math.floor(Math.sqrt(this.totalLeaves / 1e9));
+  },
+
+  prestige() {
+    const gain = this.getPrestigeEssence();
+    if (gain <= 0) return;
+
+    Sound.play('prestige');
+    this.natureEssence += gain;
+    this.totalPrestiges++;
+
+    // Reset run state
+    this.leaves = 0;
+    this.totalLeaves = 0;
+    this.totalClicks = 0;
+    this.generators.forEach(g => g.count = 0);
+    this.upgrades.forEach(u => { u.bought = false; u.cooldownEnd = 0; u.activeEnd = 0; });
+    this.milestonesAchieved = [];
+    this.activeEvent = null;
+    this.eventEndTime = 0;
+    document.getElementById('event-banner').style.display = 'none';
+    document.getElementById('golden-leaf').style.display = 'none';
+
+    // Apply essence upgrades that give starting bonuses
+    if (this.essenceUpgradesBought.includes('e_speed')) {
+      this.generators[0].count = 5;
     }
 
-    // Aphid minigame tick
-    if (aphidGame.active) updateAphidMinigame(dt);
+    this.scheduleNextEvent();
+    this.save();
+    this.renderGenerators();
+    this.renderUpgrades();
+    this.renderEssenceUpgrades();
+    this.showToast('✨ Forest Reset!', 'Earned ' + gain + ' Nature Essence');
+    this.switchPanel('click');
+  },
 
-    // Aphid damage recovery
-    if (G.aphidDamageCycles > 0) {
-      // tracked per cycle completion
-    }
+  buyEssenceUpgrade(id) {
+    if (this.essenceUpgradesBought.includes(id)) return;
+    const upg = this.essenceUpgrades.find(u => u.id === id);
+    if (!upg || this.natureEssence < upg.cost) return;
+    Sound.play('buy');
+    this.natureEssence -= upg.cost;
+    this.essenceUpgradesBought.push(id);
+    this.renderEssenceUpgrades();
+  },
 
-    // Passive generation
-    if (G.passiveGen > 0) {
-      const mult = getMultiplier();
-      const passive = G.passiveGen * mult * dt;
-      G.sugar += passive;
-      G.totalSugar += passive;
-      G.sugarThisCycle += passive;
-    }
-  }
+  // ===== PANEL SWITCHING =====
+  switchPanel(name) {
+    this.activePanel = name;
+    document.querySelectorAll('.panel, #panel-click').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.panel === name);
+    });
+    if (name === 'generators') this.renderGenerators();
+    if (name === 'upgrades') this.renderUpgrades();
+    if (name === 'prestige') this.renderEssenceUpgrades();
+    if (name === 'stats') this.renderStats();
+  },
 
-  // Visuals
-  updateDayNightCycle();
-  updateForestColors();
-  updateLeafAnimation(dt);
-  updateFallingLeaves(dt);
-  updateParticles(dt);
-  updateRainSnow(dt);
-  updateSeasonalCosmetics(dt);
-  if (soundEnabled) updateAmbientSounds();
-  if (dyingLeaf) updateDyingLeaf(dt);
-  controls.update();
-  updateHUD();
-  renderer.render(scene, camera);
-  requestAnimationFrame(gameLoop);
-}
+  setBuyAmount(amt) {
+    this.buyAmount = amt;
+    document.querySelectorAll('.buy-amt-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    this.renderGenerators();
+  },
 
-function getMultiplier() {
-  const season = SEASONS[G.seasonIndex];
-  let seasonMult = season.mult;
-  if (G.skills.evergreen && season.name === 'winter') seasonMult = 1.0;
+  // ===== RENDERING =====
+  renderGenerators() {
+    const list = document.getElementById('gen-list');
+    list.innerHTML = '';
 
-  const weatherData = WEATHERS.find(w => w.name === G.weather);
-  let weatherMult = weatherData ? weatherData.mult : 1;
-  if (weatherMult < 1) {
-    const penalty = 1 - weatherMult;
-    weatherMult = 1 - penalty * Math.max(0, 1 - G.weatherResist);
-  }
+    this.generators.forEach((gen, i) => {
+      const cost = this.buyAmount === -1 ? this.getMaxAffordable(i) : { count: this.buyAmount, cost: this.getGeneratorCost(i, this.buyAmount) };
+      const canAfford = this.leaves >= cost.cost && cost.count > 0;
+      const unlocked = this.totalLeavesAllTime >= gen.unlockAt || gen.count > 0;
 
-  let eventMult = G.event ? G.event.mult : 1;
-  return seasonMult * weatherMult * eventMult * G.aphidProductionMult;
-}
+      const card = document.createElement('div');
+      card.className = 'gen-card' + (unlocked ? '' : ' locked') + (canAfford ? ' affordable' : '');
 
-function doPhotosynthesis(e) {
-  if (!G.alive || !G.started) return;
-  const mult = getMultiplier();
-  const amount = Math.max(1, Math.round(G.clickPower * mult));
-  G.sugar += amount;
-  G.totalSugar += amount;
-  G.sugarThisCycle += amount;
+      const prodRate = i === 0
+        ? fmt(gen.count * gen.baseProduction * this.getProductionMultiplier() * (this.milestonesAchieved.includes('m_sap10') ? 2 : 1)) + ' leaves/s'
+        : fmt(gen.count * gen.baseProduction * this.getProductionMultiplier()) + ' ' + this.generators[i-1].name.toLowerCase() + 's/s';
 
-  const ft = document.createElement('div');
-  ft.className = 'float-text';
-  ft.textContent = `+${amount}`;
-  const bx = e.clientX || window.innerWidth / 2;
-  const by = e.clientY || window.innerHeight - 150;
-  ft.style.left = (bx + (Math.random() - 0.5) * 40) + 'px';
-  ft.style.top = (by - 20) + 'px';
-  document.body.appendChild(ft);
-  setTimeout(() => ft.remove(), 1000);
+      card.innerHTML = `
+        <div class="gen-icon">${gen.icon}</div>
+        <div class="gen-info">
+          <div class="gen-name">${gen.name} <span style="color:var(--green-bright)">(${fmt(Math.floor(gen.count))})</span></div>
+          <div class="gen-detail">${unlocked ? prodRate : 'Unlock at ' + fmt(gen.unlockAt) + ' total leaves'}</div>
+        </div>
+        <button class="gen-buy-btn ${canAfford ? 'can-afford' : ''}" onclick="Game.buyGenerator(${i})" ${!canAfford || !unlocked ? '' : ''}>
+          ${this.buyAmount === -1 ? 'Max (' + cost.count + ')' : '×' + this.buyAmount}<br>🍂 ${fmt(cost.cost)}
+        </button>
+      `;
+      list.appendChild(card);
+    });
+  },
 
-  leafGroup.scale.setScalar(G.leafScale * 1.15);
-  setTimeout(() => { if (G.alive) leafGroup.scale.setScalar(G.leafScale); }, 100);
+  renderUpgrades() {
+    const list = document.getElementById('upgrade-list');
+    list.innerHTML = '';
 
-  // Burst particles
-  for (let i = 0; i < 3; i++) spawnParticle();
-}
+    this.upgrades.forEach((upg, i) => {
+      const card = document.createElement('div');
+      const now = Date.now();
+      let statusText = '🍂 ' + fmt(upg.cost);
+      let extraClass = '';
 
-// ============ PARTICLES ============
-function spawnParticle() {
-  const geo = new THREE.SphereGeometry(0.08, 4, 4);
-  const mat = new THREE.MeshBasicMaterial({ color: 0xffdd00, transparent: true });
-  const p = new THREE.Mesh(geo, mat);
-  p.position.copy(leafGroup.position);
-  p.velocity = new THREE.Vector3((Math.random() - 0.5) * 2, Math.random() * 3 + 1, (Math.random() - 0.5) * 2);
-  p.life = 1;
-  scene.add(p);
-  particles.push(p);
-}
+      if (upg.bought && upg.type !== 'active') {
+        extraClass = 'purchased';
+        statusText = '✅ Purchased';
+      } else if (upg.type === 'active' && upg.bought) {
+        if (upg.activeEnd && now < upg.activeEnd) {
+          extraClass = 'cooldown';
+          statusText = '⚡ Active: ' + Math.ceil((upg.activeEnd - now) / 1000) + 's';
+        } else if (upg.cooldownEnd && now < upg.cooldownEnd) {
+          extraClass = 'cooldown';
+          statusText = '⏳ Cooldown: ' + fmtTime((upg.cooldownEnd - now) / 1000);
+        } else {
+          statusText = '🔄 Click to activate';
+          extraClass = 'affordable';
+        }
+      } else if (this.leaves >= upg.cost) {
+        extraClass = 'affordable';
+      }
 
-function updateParticles(dt) {
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i];
-    p.life -= dt * 1.5;
-    p.position.add(p.velocity.clone().multiplyScalar(dt));
-    p.velocity.y -= dt * 3;
-    p.material.opacity = Math.max(0, p.life);
-    if (p.life <= 0) { scene.remove(p); particles.splice(i, 1); }
-  }
-}
+      card.className = 'upgrade-card ' + extraClass;
+      card.innerHTML = `
+        <div class="upgrade-name">${upg.name}</div>
+        <div class="upgrade-desc">${upg.desc}</div>
+        <div class="upgrade-cost">${statusText}</div>
+      `;
+      card.onclick = () => this.buyUpgrade(i);
+      list.appendChild(card);
+    });
+  },
 
-// ============ RAIN / SNOW ============
-function updateRainSnow(dt) {
-  const needRain = G.weather === 'rain' && G.alive;
-  const needSnow = G.season === 'winter' && G.alive;
-
-  if (needRain && rainDrops.length < 150) {
-    for (let i = 0; i < 5; i++) {
-      const geo = new THREE.CylinderGeometry(0.02, 0.02, 0.4, 3);
-      const mat = new THREE.MeshBasicMaterial({ color: 0x4488cc, transparent: true, opacity: 0.5 });
-      const drop = new THREE.Mesh(geo, mat);
-      drop.position.set((Math.random() - 0.5) * 50, 18 + Math.random() * 5, (Math.random() - 0.5) * 50);
-      scene.add(drop);
-      rainDrops.push(drop);
-    }
-  }
-  for (let i = rainDrops.length - 1; i >= 0; i--) {
-    const d = rainDrops[i];
-    d.position.y -= dt * 18;
-    if (d.position.y < 0 || !needRain) { scene.remove(d); rainDrops.splice(i, 1); }
-  }
-
-  if (needSnow && snowFlakes.length < 80) {
-    for (let i = 0; i < 2; i++) {
-      const geo = new THREE.SphereGeometry(0.06, 4, 4);
-      const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
-      const flake = new THREE.Mesh(geo, mat);
-      flake.position.set((Math.random() - 0.5) * 50, 18, (Math.random() - 0.5) * 50);
-      flake.drift = Math.random() * 2 - 1;
-      scene.add(flake);
-      snowFlakes.push(flake);
-    }
-  }
-  for (let i = snowFlakes.length - 1; i >= 0; i--) {
-    const f = snowFlakes[i];
-    f.position.y -= dt * 1.5;
-    f.position.x += Math.sin(f.position.y * 0.5 + f.drift) * dt * 0.8;
-    if (f.position.y < 0 || !needSnow) { scene.remove(f); snowFlakes.splice(i, 1); }
-  }
-}
-
-// ============ LEAF ANIMATION ============
-let leafTime = 0;
-function updateLeafAnimation(dt) {
-  leafTime += dt;
-  if (G.alive && leafMesh) {
-    let swayAmt = 0.08;
-    if (G.event && G.event.name === 'wind') swayAmt = 0.35;
-    leafGroup.rotation.z = Math.sin(leafTime * 1.5) * swayAmt;
-    leafGroup.rotation.x = Math.sin(leafTime * 0.8) * swayAmt * 0.5;
-
-    // Hover bob
-    leafGroup.position.y = 4.5 + Math.sin(leafTime * 1.2) * 0.15;
-
-    // Glow pulse
-    if (leafGlow) {
-      leafGlow.material.opacity = 0.1 + Math.sin(leafTime * 2) * 0.08;
-      leafGlow.rotation.z = leafTime * 0.2;
-    }
-
-    if (G.skills.colorShift) {
-      const hue = (leafTime * 0.1) % 1;
-      leafMesh.material.color.setHSL(hue, 0.7, 0.45);
-    }
-    if (G.skills.legendary) {
-      const glow = 0.5 + Math.sin(leafTime * 3) * 0.2;
-      leafMesh.material.emissive = new THREE.Color(0x44ff44);
-      leafMesh.material.emissiveIntensity = glow;
-    }
-  }
-}
-
-// ============ DEATH ============
-function triggerDeath() {
-  G.alive = false;
-  if (leafMesh) leafMesh.material.color.setHex(0x8B6914);
-
-  dyingLeaf = leafGroup.clone();
-  dyingLeaf.position.copy(leafGroup.position);
-  scene.add(dyingLeaf);
-  dyingLeaf.velocity = new THREE.Vector3((Math.random() - 0.5) * 2, 1, (Math.random() - 0.5) * 2);
-  dyingLeaf.rotVel = new THREE.Vector3(Math.random() * 3, Math.random() * 5, Math.random() * 3);
-  dyingLeaf.landed = false;
-  leafGroup.visible = false;
-}
-
-function updateDyingLeaf(dt) {
-  if (!dyingLeaf || dyingLeaf.landed) {
-    if (dyingLeaf && dyingLeaf.landed && !G.gameOver) {
-      G.gameOver = true;
-      setTimeout(showGameOver, 500);
-    }
-    return;
-  }
-  dyingLeaf.velocity.y -= dt * 4;
-  dyingLeaf.velocity.x *= (1 - dt * 0.5);
-  dyingLeaf.velocity.z *= (1 - dt * 0.5);
-  dyingLeaf.velocity.x += Math.sin(leafTime * 3) * dt * 2;
-  dyingLeaf.position.add(dyingLeaf.velocity.clone().multiplyScalar(dt));
-  dyingLeaf.rotation.x += dyingLeaf.rotVel.x * dt;
-  dyingLeaf.rotation.y += dyingLeaf.rotVel.y * dt;
-  dyingLeaf.rotation.z += dyingLeaf.rotVel.z * dt;
-  if (dyingLeaf.position.y <= 0.1) {
-    dyingLeaf.position.y = 0.1;
-    dyingLeaf.landed = true;
-    dyingLeaf.rotVel.set(0, 0, 0);
-  }
-}
-
-function showGameOver() {
-  document.getElementById('go-cycles').textContent = `Cycles Survived: ${G.cycle - 1}`;
-  document.getElementById('go-sugar').textContent = `Total Sugar: ${Math.floor(G.totalSugar)}`;
-  document.getElementById('go-season').textContent = `Died in: ${SEASONS[G.seasonIndex].label}`;
-  document.getElementById('go-quote').textContent = G.deathQuotes[Math.floor(Math.random() * G.deathQuotes.length)];
-  document.getElementById('game-over').style.display = 'flex';
-}
-
-// ============ HUD ============
-function updateHUD() {
-  document.getElementById('sugar-count').textContent = Math.floor(G.sugar);
-  const perSec = (G.passiveGen * getMultiplier()).toFixed(1);
-  document.getElementById('sugar-per-sec').textContent = G.passiveGen > 0 ? `(${perSec}/s)` : '';
-
-  document.getElementById('quota-display').textContent = `Quota: ${Math.floor(G.sugarThisCycle)} / ${G.quota}  •  ${Math.ceil(G.timer)}s`;
-
-  document.getElementById('season-pill').textContent = SEASONS[G.seasonIndex].label;
-  const wData = WEATHERS.find(w => w.name === G.weather);
-  document.getElementById('weather-pill').textContent = wData ? wData.label : '☀️ Sunny';
-  document.getElementById('cycle-pill').textContent = `Cycle ${G.cycle}`;
-
-  const eventPill = document.getElementById('event-pill');
-  if (G.event) {
-    eventPill.style.display = 'block';
-    eventPill.textContent = G.event.label;
-  } else {
-    eventPill.style.display = 'none';
-  }
-}
-
-// ============ SHOP ============
-function closeShop() {
-  document.getElementById('shop-panel').style.display = 'none';
-  document.getElementById('shop-backdrop').style.display = 'none';
-}
-function closeSkills() {
-  document.getElementById('skill-panel').style.display = 'none';
-  document.getElementById('skill-backdrop').style.display = 'none';
-}
-function toggleShop() {
-  const panel = document.getElementById('shop-panel');
-  closeSkills();
-  const showing = panel.style.display === 'block';
-  panel.style.display = showing ? 'none' : 'block';
-  document.getElementById('shop-backdrop').style.display = showing ? 'none' : 'block';
-  if (!showing) renderShop();
-}
-
-function renderShop() {
-  const container = document.getElementById('shop-items');
-  container.innerHTML = '';
-  for (const [key, u] of Object.entries(G.upgrades)) {
-    const cost = Math.floor(u.baseCost * Math.pow(u.costMult, u.level));
-    const maxed = u.level >= u.max;
-    const div = document.createElement('div');
-    div.className = 'upgrade-item';
-    div.innerHTML = `
-      <div>
-        <div class="upgrade-name">${u.icon} ${key.charAt(0).toUpperCase() + key.slice(1)} (${u.level}/${u.max})</div>
-        <div class="upgrade-desc">${u.desc}</div>
-      </div>
-      ${maxed ? '<span class="upgrade-maxed">MAXED</span>' :
-        `<button class="upgrade-cost" onclick="buyUpgrade('${key}')" ${G.sugar < cost ? 'disabled' : ''}>🍬 ${cost}</button>`}
+  renderEssenceUpgrades() {
+    document.getElementById('essence-display').innerHTML = `
+      <p style="font-size:1.2em;color:var(--purple);font-weight:700">✨ ${this.natureEssence} Nature Essence</p>
+      <p style="font-size:0.85em;color:var(--text-dim)">Prestiges: ${this.totalPrestiges}</p>
     `;
-    container.appendChild(div);
-  }
-}
 
-function buyUpgrade(key) {
-  const u = G.upgrades[key];
-  if (u.level >= u.max) return;
-  const cost = Math.floor(u.baseCost * Math.pow(u.costMult, u.level));
-  if (G.sugar < cost) return;
-  G.sugar -= cost;
-  u.level++;
-  if (key === 'cuticle') G.clickPower++;
-  if (key === 'chloro') G.passiveGen++;
-  if (key === 'weatherRes') G.weatherResist += 0.25;
-  renderShop();
-}
+    const gain = this.getPrestigeEssence();
+    document.getElementById('prestige-gain-text').innerHTML = gain > 0
+      ? `You will earn <strong style="color:var(--purple)">${gain} Nature Essence</strong> from this reset.`
+      : `Need ${fmt(1e9)} total leaves this run to prestige. Current: ${fmt(this.totalLeaves)}`;
 
-// ============ SKILL TREE ============
-function toggleSkills() {
-  const panel = document.getElementById('skill-panel');
-  closeShop();
-  const showing = panel.style.display === 'block';
-  panel.style.display = showing ? 'none' : 'block';
-  document.getElementById('skill-backdrop').style.display = showing ? 'none' : 'block';
-  if (!showing) renderSkillTree();
-}
+    document.getElementById('prestige-btn').disabled = gain <= 0;
 
-function renderSkillTree() {
-  const container = document.getElementById('skill-tree');
-  container.innerHTML = '';
-  const cx = 270, trunkBottom = 450, trunkTop = 380;
-
-  const trunk = document.createElement('div');
-  trunk.className = 'skill-branch-line';
-  trunk.style.cssText = `left:${cx - 4}px; top:${trunkTop}px; width:8px; height:${trunkBottom - trunkTop}px; border-radius:4px; background:#6d4c2a;`;
-  container.appendChild(trunk);
-
-  const branchConfigs = [
-    { dx: -180, label: 'Photo', startY: 350 },
-    { dx: -60, label: 'Resilience', startY: 330 },
-    { dx: 60, label: 'Growth', startY: 330 },
-    { dx: 180, label: 'Cosmetic', startY: 350 },
-  ];
-
-  SKILL_TREE.forEach((branch, bi) => {
-    const cfg = branchConfigs[bi];
-    const nodes = branch.nodes;
-
-    const lbl = document.createElement('div');
-    lbl.className = 'branch-label';
-    lbl.textContent = branch.label;
-    lbl.style.cssText = `left:${cx + cfg.dx - 30}px; top:${cfg.startY - 25}px; color:${branch.color}; width:80px; text-align:center;`;
-    container.appendChild(lbl);
-
-    nodes.forEach((node, ni) => {
-      const x = cx + cfg.dx;
-      const y = cfg.startY - ni * 80 - 30;
-
-      if (ni === 0) {
-        drawLine(container, cx, trunkTop, x, y + 28, branch.color, node.unlocked);
-      } else {
-        const py = cfg.startY - (ni - 1) * 80 - 30;
-        drawLine(container, x, py - 28, x, y + 28, branch.color, node.unlocked);
-      }
-
-      const prev = ni === 0 ? true : nodes[ni - 1].unlocked;
-      const cls = node.unlocked ? 'unlocked' : (prev && G.sugar >= node.cost) ? 'available' : 'locked';
-
-      const el = document.createElement('div');
-      el.className = `skill-node ${cls}`;
-      el.style.cssText = `left:${x - 28}px; top:${y - 28}px;`;
-      el.innerHTML = `${node.name}<span class="cost">${node.unlocked ? '✓' : '🍬' + node.cost}</span>`;
-      el.title = node.desc;
-      if (!node.unlocked && prev) {
-        el.onclick = () => buySkill(branch, bi, ni);
-      }
-      container.appendChild(el);
+    const list = document.getElementById('essence-upgrades-list');
+    list.innerHTML = '';
+    this.essenceUpgrades.forEach(upg => {
+      const bought = this.essenceUpgradesBought.includes(upg.id);
+      const canAfford = this.natureEssence >= upg.cost;
+      const card = document.createElement('div');
+      card.className = 'essence-upgrade' + (bought ? ' purchased' : '');
+      card.innerHTML = `
+        <div class="essence-upgrade-name">${upg.name} ${bought ? '✅' : ''}</div>
+        <div class="essence-upgrade-desc">${upg.desc}</div>
+        <div class="essence-upgrade-cost">${bought ? 'Purchased' : '✨ ' + upg.cost + ' Essence'}</div>
+      `;
+      if (!bought && canAfford) card.onclick = () => this.buyEssenceUpgrade(upg.id);
+      list.appendChild(card);
     });
-  });
-}
+  },
 
-function drawLine(container, x1, y1, x2, y2, color, active) {
-  const dx = x2 - x1, dy = y2 - y1;
-  const len = Math.sqrt(dx * dx + dy * dy);
-  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-  const line = document.createElement('div');
-  line.className = `skill-branch-line ${active ? 'active' : ''}`;
-  line.style.cssText = `left:${x1}px; top:${y1}px; width:${len}px; height:4px; transform-origin: 0 50%; transform: rotate(${angle}deg); border-radius:2px;`;
-  if (active) line.style.background = color;
-  container.appendChild(line);
-}
+  renderStats() {
+    const lps = this.getLPS();
 
-function buySkill(branch, bi, ni) {
-  const node = branch.nodes[ni];
-  if (node.unlocked) return;
-  const prev = ni === 0 ? true : branch.nodes[ni - 1].unlocked;
-  if (!prev || G.sugar < node.cost) return;
-  G.sugar -= node.cost;
-  node.unlocked = true;
-  node.effect();
-  renderSkillTree();
-}
+    document.getElementById('stats-production').innerHTML = `
+      <div class="stat-row"><span class="stat-label">Leaves/sec</span><span class="stat-value">${fmt(lps)}</span></div>
+      <div class="stat-row"><span class="stat-label">Click Power</span><span class="stat-value">${fmt(this.getClickPower())}</span></div>
+      <div class="stat-row"><span class="stat-label">Production Multiplier</span><span class="stat-value">×${fmt(this.getProductionMultiplier())}</span></div>
+    `;
 
-// ============ APHID MINIGAME (HTML OVERLAY - MOBILE FRIENDLY) ============
-const aphidGame = { active: false, aphids: [], timer: 0, totalAphids: 0, remaining: 0 };
-let aphidMeshes = []; // kept for compat but unused now
+    document.getElementById('stats-totals').innerHTML = `
+      <div class="stat-row"><span class="stat-label">Current Leaves</span><span class="stat-value">${fmt(this.leaves)}</span></div>
+      <div class="stat-row"><span class="stat-label">Total This Run</span><span class="stat-value">${fmt(this.totalLeaves)}</span></div>
+      <div class="stat-row"><span class="stat-label">Total All Time</span><span class="stat-value">${fmt(this.totalLeavesAllTime)}</span></div>
+      <div class="stat-row"><span class="stat-label">Total Clicks</span><span class="stat-value">${fmt(this.totalClicks)}</span></div>
+      <div class="stat-row"><span class="stat-label">Play Time</span><span class="stat-value">${fmtTime((Date.now() - this.startTime) / 1000)}</span></div>
+    `;
 
-function startAphidMinigame() {
-  aphidGame.active = true;
-  aphidGame.timer = 10;
-  aphidGame.aphids = [];
-  const count = 5 + Math.floor(Math.random() * 4); // 5-8
-  aphidGame.totalAphids = count;
-  aphidGame.remaining = count;
+    document.getElementById('stats-milestones').innerHTML = this.milestones.map(ms => `
+      <div class="stat-row">
+        <span class="stat-label">${ms.name}</span>
+        <span class="stat-value">${this.milestonesAchieved.includes(ms.id) ? '✅ ' + ms.desc : '🔒'}</span>
+      </div>
+    `).join('');
 
-  const overlay = document.getElementById('aphid-overlay');
-  overlay.innerHTML = '';
-  overlay.classList.add('active');
+    document.getElementById('stats-prestige').innerHTML = `
+      <div class="stat-row"><span class="stat-label">Nature Essence</span><span class="stat-value">✨ ${this.natureEssence}</span></div>
+      <div class="stat-row"><span class="stat-label">Total Prestiges</span><span class="stat-value">${this.totalPrestiges}</span></div>
+      <div class="stat-row"><span class="stat-label">Essence Upgrades</span><span class="stat-value">${this.essenceUpgradesBought.length}/${this.essenceUpgrades.length}</span></div>
+    `;
+  },
 
-  const bugEmojis = ['🐛', '🪲', '🐜'];
-  for (let i = 0; i < count; i++) {
-    const sprite = document.createElement('div');
-    sprite.className = 'aphid-sprite';
-    sprite.textContent = bugEmojis[Math.floor(Math.random() * bugEmojis.length)];
-    // Random screen position (avoid edges)
-    const margin = 50;
-    sprite.style.left = (margin + Math.random() * (window.innerWidth - margin * 2 - 44)) + 'px';
-    sprite.style.top = (margin + Math.random() * (window.innerHeight - margin * 2 - 44)) + 'px';
-    sprite.dataset.alive = 'true';
-    sprite.dataset.driftX = (Math.random() - 0.5) * 60;
-    sprite.dataset.driftY = (Math.random() - 0.5) * 40;
-    sprite.dataset.phase = String(Math.random() * Math.PI * 2);
+  updateDisplay() {
+    // Leaf counter
+    document.getElementById('leaf-counter').textContent = '🍂 ' + fmt(this.leaves) + ' Leaves';
 
-    sprite.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (sprite.dataset.alive !== 'true') return;
-      sprite.dataset.alive = 'false';
-      sprite.classList.add('squashed');
-      sprite.textContent = '💥';
-      aphidGame.remaining--;
-      // Pop text
-      const ft = document.createElement('div');
-      ft.className = 'float-text';
-      ft.textContent = '🐛💥';
-      ft.style.left = e.clientX + 'px';
-      ft.style.top = e.clientY + 'px';
-      document.body.appendChild(ft);
-      setTimeout(() => ft.remove(), 1000);
-    });
-    sprite.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      sprite.click();
-    }, { passive: false });
+    // LPS
+    const lps = this.getLPS();
+    document.getElementById('lps-display').textContent = fmt(lps) + ' leaves/sec';
 
-    overlay.appendChild(sprite);
-    aphidGame.aphids.push(sprite);
-  }
+    // Click power label
+    document.getElementById('click-power-label').textContent = '+' + fmt(this.getClickPower()) + ' per click';
 
-  document.getElementById('aphid-timer').style.display = 'block';
-  document.getElementById('aphid-count').style.display = 'block';
-  document.getElementById('event-pill').style.display = 'block';
-  document.getElementById('event-pill').textContent = '🐛 Aphid Attack! TAP THEM!';
-  showEventBanner('aphid');
-}
+    // Next unlock
+    this.updateNextUnlock();
 
-function updateAphidMinigame(dt) {
-  aphidGame.timer -= dt;
-  document.getElementById('aphid-timer').textContent = Math.ceil(Math.max(0, aphidGame.timer));
-  document.getElementById('aphid-count').textContent = `🐛 ${aphidGame.remaining} aphids remaining`;
+    // Update background
+    this.updateBackground();
 
-  // Animate aphid sprites — wander around screen
-  aphidGame.aphids.forEach(sprite => {
-    if (sprite.dataset.alive !== 'true') return;
-    const phase = parseFloat(sprite.dataset.phase) + dt * 2;
-    sprite.dataset.phase = String(phase);
-    const driftX = parseFloat(sprite.dataset.driftX);
-    const driftY = parseFloat(sprite.dataset.driftY);
-    let x = parseFloat(sprite.style.left) + Math.sin(phase) * driftX * dt;
-    let y = parseFloat(sprite.style.top) + Math.cos(phase * 0.7) * driftY * dt;
-    // Keep on screen
-    x = Math.max(10, Math.min(window.innerWidth - 54, x));
-    y = Math.max(10, Math.min(window.innerHeight - 54, y));
-    sprite.style.left = x + 'px';
-    sprite.style.top = y + 'px';
-  });
+    // Update active panel generator affordability
+    if (this.activePanel === 'generators') {
+      const btns = document.querySelectorAll('.gen-buy-btn');
+      this.generators.forEach((gen, i) => {
+        const cost = this.buyAmount === -1 ? this.getMaxAffordable(i) : { count: this.buyAmount, cost: this.getGeneratorCost(i, this.buyAmount) };
+        const canAfford = this.leaves >= cost.cost && cost.count > 0;
+        if (btns[i]) {
+          btns[i].classList.toggle('can-afford', canAfford);
+          btns[i].parentElement.classList.toggle('affordable', canAfford);
+        }
+      });
+    }
 
-  if (aphidGame.remaining <= 0) {
-    endAphidMinigame(true);
-  } else if (aphidGame.timer <= 0) {
-    endAphidMinigame(false);
-  }
-}
+    // Update upgrades surge timer
+    if (this.activePanel === 'upgrades') {
+      const surge = this.upgrades.find(u => u.id === 'surge');
+      if (surge.bought) this.renderUpgrades();
+    }
+  },
 
-function endAphidMinigame(success) {
-  aphidGame.active = false;
-  // Clean up overlay
-  const overlay = document.getElementById('aphid-overlay');
-  overlay.classList.remove('active');
-  overlay.innerHTML = '';
-  aphidGame.aphids = [];
-
-  document.getElementById('aphid-timer').style.display = 'none';
-  document.getElementById('aphid-count').style.display = 'none';
-  document.getElementById('event-pill').style.display = 'none';
-  hideEventEffects();
-
-  const resultEl = document.getElementById('aphid-result');
-  resultEl.style.display = 'block';
-
-  if (success) {
-    resultEl.textContent = '✅ Aphids Cleared! Bonus!';
-    resultEl.style.color = '#4CAF50';
-    G.sugar += 20;
-    G.totalSugar += 20;
-    G.sugarThisCycle += 20;
-  } else {
-    resultEl.textContent = '💀 Aphids Win! -50% Sugar!';
-    resultEl.style.color = '#ff4444';
-    G.sugar = Math.floor(G.sugar * 0.5);
-    G.aphidProductionMult = 0.5;
-    G.aphidDamageCycles = 3;
-    addLeafHoles();
-  }
-
-  setTimeout(() => { resultEl.style.display = 'none'; }, 1500);
-}
-
-// ============ EVENT VISUAL EFFECTS ============
-let currentEventEffect = null;
-let shakeInterval = null;
-
-function showEventBanner(eventName) {
-  const banner = document.getElementById('event-banner');
-  const borderFx = document.getElementById('screen-border-effect');
-  const rainbow = document.getElementById('rainbow-overlay');
-  const sparkles = document.getElementById('sparkle-container');
-
-  // Reset all
-  hideEventEffects();
-
-  banner.style.display = 'block';
-
-  switch(eventName) {
-    case 'aphid':
-      banner.textContent = '🐛 APHID ATTACK!';
-      banner.style.background = 'rgba(200,30,30,0.85)';
-      // Red border pulse
-      borderFx.style.display = 'block';
-      borderFx.style.boxShadow = 'inset 0 0 60px rgba(255,0,0,0.5)';
-      borderFx.style.animation = 'none';
-      let pulseOn = true;
-      currentEventEffect = setInterval(() => {
-        pulseOn = !pulseOn;
-        borderFx.style.boxShadow = pulseOn ? 'inset 0 0 60px rgba(255,0,0,0.5)' : 'inset 0 0 30px rgba(255,0,0,0.2)';
-      }, 400);
-      break;
-    case 'pollinator':
-      banner.textContent = '🐝 Pollinator Visit!';
-      banner.style.background = 'rgba(200,170,30,0.85)';
-      // Golden sparkles
-      sparkles.style.display = 'block';
-      sparkles.innerHTML = '';
-      for (let i = 0; i < 20; i++) {
-        const s = document.createElement('div');
-        s.className = 'sparkle';
-        s.style.left = (20 + Math.random() * 60) + '%';
-        s.style.top = (20 + Math.random() * 60) + '%';
-        s.style.animationDelay = (Math.random() * 1) + 's';
-        s.style.width = s.style.height = (6 + Math.random() * 8) + 'px';
-        sparkles.appendChild(s);
+  updateNextUnlock() {
+    const el = document.getElementById('next-unlock');
+    // Find next locked generator
+    for (const gen of this.generators) {
+      if (gen.count === 0 && this.totalLeavesAllTime < gen.unlockAt) {
+        const pct = Math.min(100, (this.totalLeavesAllTime / gen.unlockAt * 100)).toFixed(0);
+        el.innerHTML = `Next: <strong>${gen.name}</strong><br>${fmt(this.totalLeavesAllTime)} / ${fmt(gen.unlockAt)} (${pct}%)`;
+        return;
       }
-      break;
-    case 'wind':
-      banner.textContent = '💨 Strong Wind!';
-      banner.style.background = 'rgba(100,150,200,0.85)';
-      // Screen shake
-      let shakeAmt = 0;
-      shakeInterval = setInterval(() => {
-        shakeAmt = 2 + Math.random() * 3;
-        const sx = (Math.random() - 0.5) * shakeAmt;
-        const sy = (Math.random() - 0.5) * shakeAmt;
-        document.body.style.transform = `translate(${sx}px, ${sy}px)`;
-      }, 50);
-      currentEventEffect = shakeInterval;
-      break;
-    case 'rainbow':
-      banner.textContent = '🌈 Rainbow!';
-      banner.style.background = 'linear-gradient(90deg, rgba(255,0,0,0.7), rgba(255,165,0,0.7), rgba(255,255,0,0.7), rgba(0,128,0,0.7), rgba(0,0,255,0.7), rgba(75,0,130,0.7))';
-      rainbow.style.display = 'block';
-      break;
-  }
-
-  // Auto-hide banner after 3s but keep effects
-  setTimeout(() => { banner.style.display = 'none'; }, 3000);
-}
-
-function hideEventEffects() {
-  const banner = document.getElementById('event-banner');
-  const borderFx = document.getElementById('screen-border-effect');
-  const rainbow = document.getElementById('rainbow-overlay');
-  const sparkles = document.getElementById('sparkle-container');
-
-  banner.style.display = 'none';
-  borderFx.style.display = 'none';
-  rainbow.style.display = 'none';
-  sparkles.style.display = 'none';
-  sparkles.innerHTML = '';
-  document.body.style.transform = '';
-
-  if (currentEventEffect) { clearInterval(currentEventEffect); currentEventEffect = null; }
-  if (shakeInterval) { clearInterval(shakeInterval); shakeInterval = null; }
-}
-
-function addLeafHoles() {
-  if (!leafGroup) return;
-  // Add dark spots to leaf mesh
-  for (let i = 0; i < 5; i++) {
-    const hole = new THREE.Mesh(
-      new THREE.CircleGeometry(0.08 + Math.random() * 0.06, 8),
-      new THREE.MeshBasicMaterial({ color: 0x1a0a00, side: THREE.DoubleSide })
-    );
-    hole.position.set((Math.random() - 0.5) * 0.5, (Math.random() - 0.3) * 0.7, 0.08);
-    hole.userData.isHole = true;
-    leafGroup.add(hole);
-  }
-}
-
-function removeLeafHoles() {
-  if (!leafGroup) return;
-  for (let i = leafGroup.children.length - 1; i >= 0; i--) {
-    if (leafGroup.children[i].userData && leafGroup.children[i].userData.isHole) {
-      leafGroup.remove(leafGroup.children[i]);
     }
-  }
-}
-
-// ============ SEASONAL COSMETICS ============
-let seasonalObjects = [];
-let seasonalBirds = [];
-
-function clearSeasonalCosmetics() {
-  seasonalObjects.forEach(obj => scene.remove(obj));
-  seasonalObjects = [];
-  seasonalBirds.forEach(b => scene.remove(b.mesh));
-  seasonalBirds = [];
-}
-
-function spawnSeasonalCosmetics() {
-  clearSeasonalCosmetics();
-  const season = SEASONS[G.seasonIndex].name;
-
-  if (season === 'spring') {
-    // Flowers scattered on the ground
-    const flowerColors = [0xff69b4, 0xff4500, 0xffff00, 0x9370db, 0xff1493, 0x00bfff];
-    for (let i = 0; i < 40; i++) {
-      const group = new THREE.Group();
-      const x = (Math.random() - 0.5) * 60;
-      const z = (Math.random() - 0.5) * 60;
-      group.position.set(x, 0.05, z);
-      // Petals
-      const color = flowerColors[Math.floor(Math.random() * flowerColors.length)];
-      for (let p = 0; p < 5; p++) {
-        const petal = new THREE.Mesh(
-          new THREE.CircleGeometry(0.15 + Math.random() * 0.1, 6),
-          new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide })
-        );
-        const angle = (p / 5) * Math.PI * 2;
-        petal.position.set(Math.cos(angle) * 0.12, 0, Math.sin(angle) * 0.12);
-        petal.rotation.x = -Math.PI / 2;
-        group.add(petal);
+    // Find next unpurchased upgrade
+    for (const upg of this.upgrades) {
+      if (!upg.bought) {
+        const pct = Math.min(100, (this.leaves / upg.cost * 100)).toFixed(0);
+        el.innerHTML = `Next: <strong>${upg.name}</strong><br>${fmt(this.leaves)} / ${fmt(upg.cost)} (${pct}%)`;
+        return;
       }
-      // Center
-      const center = new THREE.Mesh(
-        new THREE.SphereGeometry(0.06, 6, 6),
-        new THREE.MeshLambertMaterial({ color: 0xffdd00 })
-      );
-      center.position.y = 0.02;
-      group.add(center);
-      scene.add(group);
-      seasonalObjects.push(group);
     }
-  } else if (season === 'summer') {
-    // Birds flying around
-    for (let i = 0; i < 8; i++) {
-      const bird = new THREE.Group();
-      // Body
-      const body = new THREE.Mesh(
-        new THREE.SphereGeometry(0.15, 5, 4),
-        new THREE.MeshLambertMaterial({ color: Math.random() > 0.5 ? 0x333333 : 0x553322 })
-      );
-      bird.add(body);
-      // Wings
-      const wingGeo = new THREE.PlaneGeometry(0.4, 0.12);
-      const wingMat = new THREE.MeshLambertMaterial({ color: 0x444444, side: THREE.DoubleSide });
-      const lWing = new THREE.Mesh(wingGeo, wingMat);
-      lWing.position.set(-0.2, 0, 0);
-      lWing.userData.isWing = true;
-      bird.add(lWing);
-      const rWing = new THREE.Mesh(wingGeo, wingMat);
-      rWing.position.set(0.2, 0, 0);
-      rWing.userData.isWing = true;
-      bird.add(rWing);
-
-      bird.position.set(
-        (Math.random() - 0.5) * 40,
-        8 + Math.random() * 8,
-        (Math.random() - 0.5) * 40
-      );
-      bird.userData = {
-        angle: Math.random() * Math.PI * 2,
-        radius: 10 + Math.random() * 15,
-        speed: 0.3 + Math.random() * 0.5,
-        height: bird.position.y,
-        phase: Math.random() * Math.PI * 2,
-        centerX: (Math.random() - 0.5) * 10,
-        centerZ: (Math.random() - 0.5) * 10,
-      };
-      scene.add(bird);
-      seasonalBirds.push({ mesh: bird });
+    // All done
+    const gain = this.getPrestigeEssence();
+    if (gain > 0) {
+      el.innerHTML = `<strong>Prestige Available!</strong><br>+${gain} Nature Essence`;
+    } else {
+      el.innerHTML = `Goal: Prestige<br>${fmt(this.totalLeaves)} / ${fmt(1e9)}`;
     }
-  } else if (season === 'fall') {
-    // Pumpkins on the ground
-    for (let i = 0; i < 20; i++) {
-      const pumpkin = new THREE.Group();
-      const x = (Math.random() - 0.5) * 50;
-      const z = (Math.random() - 0.5) * 50;
-      pumpkin.position.set(x, 0.25, z);
-      const size = 0.2 + Math.random() * 0.2;
-      const body = new THREE.Mesh(
-        new THREE.SphereGeometry(size, 8, 6),
-        new THREE.MeshLambertMaterial({ color: 0xff6600 })
-      );
-      body.scale.y = 0.75;
-      pumpkin.add(body);
-      // Stem
-      const stem = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.03, 0.04, 0.12, 4),
-        new THREE.MeshLambertMaterial({ color: 0x4a2e15 })
-      );
-      stem.position.y = size * 0.7;
-      pumpkin.add(stem);
-      scene.add(pumpkin);
-      seasonalObjects.push(pumpkin);
+  },
+
+  updateBackground() {
+    const scene = document.getElementById('bg-scene');
+    const totalGens = this.generators.reduce((s, g) => s + Math.floor(g.count), 0);
+
+    let bg;
+    if (totalGens >= 200) {
+      bg = 'linear-gradient(180deg, #050a15 0%, #0a1a0a 30%, #0d2b0d 60%, #1a4a1a 100%)';
+    } else if (totalGens >= 100) {
+      bg = 'linear-gradient(180deg, #080e18 0%, #0c1e0c 40%, #153015 100%)';
+    } else if (totalGens >= 50) {
+      bg = 'linear-gradient(180deg, #0a0f14 0%, #0e1a0e 50%, #122512 100%)';
+    } else if (totalGens >= 20) {
+      bg = 'linear-gradient(180deg, #0a0f0a 0%, #0f1a0f 60%, #142014 100%)';
+    } else if (totalGens >= 5) {
+      bg = 'linear-gradient(180deg, #0a0e0a 0%, #0d150d 100%)';
+    } else {
+      bg = 'linear-gradient(180deg, #0a0f0a 0%, #0c0c0a 100%)';
     }
-  } else if (season === 'winter') {
-    // Snow covering ground - white patches
-    for (let i = 0; i < 30; i++) {
-      const snow = new THREE.Mesh(
-        new THREE.CircleGeometry(1 + Math.random() * 2, 8),
-        new THREE.MeshLambertMaterial({ color: 0xeeeeff, side: THREE.DoubleSide })
-      );
-      snow.rotation.x = -Math.PI / 2;
-      snow.position.set((Math.random() - 0.5) * 60, 0.02, (Math.random() - 0.5) * 60);
-      scene.add(snow);
-      seasonalObjects.push(snow);
+    scene.style.background = bg;
+  },
+
+  // ===== FALLING LEAVES =====
+  startFallingLeaves() {
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => this.spawnFallingLeaf(), i * 400);
     }
-  }
-}
+  },
 
-let lastSeasonForCosmetics = -1;
+  spawnFallingLeaf() {
+    const mainArea = document.getElementById('main-area');
+    if (!mainArea) return;
+    const leaf = document.createElement('div');
+    leaf.className = 'falling-leaf';
+    const leaves = ['🍂', '🍃', '🌿', '☘️'];
+    leaf.textContent = leaves[Math.floor(Math.random() * leaves.length)];
+    leaf.style.left = Math.random() * 100 + '%';
+    leaf.style.animationDuration = (6 + Math.random() * 8) + 's';
+    leaf.style.fontSize = (0.8 + Math.random() * 0.8) + 'em';
+    mainArea.appendChild(leaf);
+    setTimeout(() => leaf.remove(), 15000);
+  },
 
-function updateSeasonalCosmetics(dt) {
-  // Check if season changed
-  if (G.seasonIndex !== lastSeasonForCosmetics) {
-    lastSeasonForCosmetics = G.seasonIndex;
-    spawnSeasonalCosmetics();
-  }
-
-  // Animate birds in summer
-  seasonalBirds.forEach(b => {
-    const ud = b.mesh.userData;
-    ud.angle += ud.speed * dt;
-    ud.phase += dt * 5;
-    b.mesh.position.x = ud.centerX + Math.cos(ud.angle) * ud.radius;
-    b.mesh.position.z = ud.centerZ + Math.sin(ud.angle) * ud.radius;
-    b.mesh.position.y = ud.height + Math.sin(ud.phase * 0.3) * 0.5;
-    b.mesh.rotation.y = ud.angle + Math.PI / 2;
-    // Flap wings
-    b.mesh.children.forEach(c => {
-      if (c.userData && c.userData.isWing) {
-        c.rotation.z = Math.sin(ud.phase) * 0.6;
-      }
-    });
-  });
-}
-
-// ============ AMBIENT SOUND SYSTEM ============
-let audioCtx = null;
-let soundEnabled = false;
-let ambientSources = {};
-let currentSoundSeason = null;
-
-function initAudio() {
-  if (audioCtx) return;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  // Mobile: resume on any user gesture
-  if (audioCtx.state === 'suspended') {
-    const resumeAudio = () => {
-      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  // ===== SAVE / LOAD =====
+  save() {
+    const data = {
+      v: 6,
+      leaves: this.leaves,
+      totalLeaves: this.totalLeaves,
+      totalLeavesAllTime: this.totalLeavesAllTime,
+      totalClicks: this.totalClicks,
+      generators: this.generators.map(g => ({ id: g.id, count: g.count })),
+      upgrades: this.upgrades.map(u => ({ id: u.id, bought: u.bought, cooldownEnd: u.cooldownEnd || 0, activeEnd: u.activeEnd || 0 })),
+      milestonesAchieved: this.milestonesAchieved,
+      natureEssence: this.natureEssence,
+      totalPrestiges: this.totalPrestiges,
+      essenceUpgradesBought: this.essenceUpgradesBought,
+      startTime: this.startTime,
+      saveTime: Date.now()
     };
-    document.addEventListener('touchstart', resumeAudio, { once: true });
-    document.addEventListener('click', resumeAudio, { once: true });
+    try {
+      localStorage.setItem('leafgame_v6', JSON.stringify(data));
+    } catch(e) {}
+  },
+
+  load() {
+    try {
+      const raw = localStorage.getItem('leafgame_v6');
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (data.v !== 6) return;
+
+      this.leaves = data.leaves || 0;
+      this.totalLeaves = data.totalLeaves || 0;
+      this.totalLeavesAllTime = data.totalLeavesAllTime || 0;
+      this.totalClicks = data.totalClicks || 0;
+      this.startTime = data.startTime || Date.now();
+      this.natureEssence = data.natureEssence || 0;
+      this.totalPrestiges = data.totalPrestiges || 0;
+      this.essenceUpgradesBought = data.essenceUpgradesBought || [];
+      this.milestonesAchieved = data.milestonesAchieved || [];
+
+      if (data.generators) {
+        data.generators.forEach(saved => {
+          const gen = this.generators.find(g => g.id === saved.id);
+          if (gen) gen.count = saved.count;
+        });
+      }
+
+      if (data.upgrades) {
+        data.upgrades.forEach(saved => {
+          const upg = this.upgrades.find(u => u.id === saved.id);
+          if (upg) {
+            upg.bought = saved.bought;
+            upg.cooldownEnd = saved.cooldownEnd || 0;
+            upg.activeEnd = saved.activeEnd || 0;
+          }
+        });
+      }
+
+      // Calculate offline earnings
+      if (data.saveTime) {
+        const elapsed = (Date.now() - data.saveTime) / 1000;
+        if (elapsed > 30) { // Only show for >30 seconds away
+          const maxOffline = this.essenceUpgradesBought.includes('e_offline') ? 86400 : 43200; // 24h or 12h
+          const cappedElapsed = Math.min(elapsed, maxOffline);
+          const lps = this.getLPS();
+          if (lps > 0) {
+            // Also produce tier chains
+            for (let t = this.generators.length - 1; t >= 1; t--) {
+              const gen = this.generators[t];
+              if (gen.count > 0) {
+                const prod = gen.count * gen.baseProduction * this.getProductionMultiplier();
+                this.generators[t - 1].count += prod * cappedElapsed;
+              }
+            }
+
+            // Recalculate LPS with new counts
+            const offlineEarnings = this.getLPS() * cappedElapsed;
+            this.leaves += offlineEarnings;
+            this.totalLeaves += offlineEarnings;
+            this.totalLeavesAllTime += offlineEarnings;
+
+            // Show offline modal
+            document.getElementById('offline-earned').textContent = '🍂 ' + fmt(offlineEarnings) + ' Leaves';
+            document.getElementById('offline-time').textContent = 'Time away: ' + fmtTime(elapsed);
+            document.getElementById('offline-modal').classList.add('show');
+          }
+        }
+      }
+    } catch(e) {
+      console.error('Failed to load save:', e);
+    }
+  },
+
+  dismissOffline() {
+    document.getElementById('offline-modal').classList.remove('show');
+  },
+
+  hardReset() {
+    if (!confirm('This will DELETE ALL progress including prestige. Are you sure?')) return;
+    if (!confirm('Really? This cannot be undone.')) return;
+    localStorage.removeItem('leafgame_v6');
+    location.reload();
   }
-}
+};
 
-function enableSound() {
-  initAudio();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  soundEnabled = true;
-  document.getElementById('sound-toggle').textContent = '🔊';
-  document.getElementById('unmute-btn').style.display = 'none';
-  updateAmbientSounds();
-}
+// ===== START =====
+document.addEventListener('DOMContentLoaded', () => Game.init());
 
-function toggleSound() {
-  if (!audioCtx) initAudio();
-  soundEnabled = !soundEnabled;
-  document.getElementById('sound-toggle').textContent = soundEnabled ? '🔊' : '🔇';
-  if (!soundEnabled) {
-    stopAllAmbient();
-  } else {
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    document.getElementById('unmute-btn').style.display = 'none';
-    updateAmbientSounds();
-  }
-}
-
-function stopAllAmbient() {
-  Object.values(ambientSources).forEach(s => {
-    try { s.source.stop(); } catch(e) {}
-  });
-  ambientSources = {};
-  currentSoundSeason = null;
-}
-
-function createNoise(type, gain, filterFreq) {
-  if (!audioCtx || !soundEnabled) return null;
-  const bufferSize = audioCtx.sampleRate * 2;
-  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) {
-    data[i] = (Math.random() * 2 - 1);
-  }
-  const source = audioCtx.createBufferSource();
-  source.buffer = buffer;
-  source.loop = true;
-
-  const filter = audioCtx.createBiquadFilter();
-  filter.type = type || 'lowpass';
-  filter.frequency.value = filterFreq || 400;
-
-  const gainNode = audioCtx.createGain();
-  gainNode.gain.value = gain || 0.02;
-
-  source.connect(filter);
-  filter.connect(gainNode);
-  gainNode.connect(audioCtx.destination);
-  source.start();
-  return { source, gain: gainNode, filter };
-}
-
-function createChirp(interval, gain) {
-  if (!audioCtx || !soundEnabled) return null;
-  const gainNode = audioCtx.createGain();
-  gainNode.gain.value = 0;
-  gainNode.connect(audioCtx.destination);
-
-  const osc = audioCtx.createOscillator();
-  osc.type = 'sine';
-  osc.frequency.value = 2000 + Math.random() * 2000;
-  osc.connect(gainNode);
-  osc.start();
-
-  // Schedule chirps
-  const chirpLoop = setInterval(() => {
-    if (!soundEnabled) { clearInterval(chirpLoop); return; }
-    const now = audioCtx.currentTime;
-    const chirpGain = gain || 0.015;
-    gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(chirpGain, now + 0.02);
-    gainNode.gain.linearRampToValueAtTime(0, now + 0.08);
-    osc.frequency.setValueAtTime(2000 + Math.random() * 2500, now);
-    osc.frequency.linearRampToValueAtTime(1500 + Math.random() * 1500, now + 0.06);
-  }, interval + Math.random() * interval);
-
-  return { source: osc, gain: gainNode, interval: chirpLoop };
-}
-
-function updateAmbientSounds() {
-  if (!soundEnabled || !audioCtx) return;
-  const season = SEASONS[G.seasonIndex].name;
-  if (season === currentSoundSeason) return;
-  stopAllAmbient();
-  currentSoundSeason = season;
-
-  if (season === 'spring') {
-    ambientSources.wind = createNoise('lowpass', 0.01, 300);
-    ambientSources.birds1 = createChirp(1500, 0.02);
-    ambientSources.birds2 = createChirp(2200, 0.015);
-    ambientSources.birds3 = createChirp(3000, 0.01);
-    ambientSources.rustle = createNoise('bandpass', 0.008, 800);
-  } else if (season === 'summer') {
-    ambientSources.wind = createNoise('lowpass', 0.008, 250);
-    ambientSources.birds1 = createChirp(1200, 0.025);
-    ambientSources.birds2 = createChirp(1800, 0.02);
-    ambientSources.birds3 = createChirp(2500, 0.015);
-    ambientSources.birds4 = createChirp(3500, 0.01);
-    ambientSources.rustle = createNoise('bandpass', 0.006, 700);
-  } else if (season === 'fall') {
-    ambientSources.wind = createNoise('lowpass', 0.025, 400);
-    ambientSources.rustle = createNoise('bandpass', 0.015, 1000);
-    ambientSources.birds1 = createChirp(4000, 0.008);
-  } else if (season === 'winter') {
-    ambientSources.wind = createNoise('lowpass', 0.035, 200);
-    ambientSources.howl = createNoise('bandpass', 0.01, 150);
-  }
-}
-
-// ============ CLICK ON 3D LEAF ============
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-
-// ============ INIT ============
-initScene();
-
-renderer.domElement.addEventListener('click', (e) => {
-  if (!G.alive || !G.started) return;
-  // During aphid minigame, don't trigger photosynthesis (aphids are HTML overlays)
-  if (aphidGame.active) return;
-
-  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-  raycaster.setFromCamera(mouse, camera);
-
-  const hits = raycaster.intersectObjects(leafGroup.children, true);
-  if (hits.length > 0) doPhotosynthesis(e);
+// Save on page hide
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') Game.save();
 });
+window.addEventListener('beforeunload', () => Game.save());
 </script>
 </body>
 </html>
