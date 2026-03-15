@@ -1660,29 +1660,30 @@ const Visuals = {
     const ground = document.getElementById('bg-ground');
     const treesEl = document.getElementById('bg-trees');
 
+    // Dynamic brown→green gradient based on total leaves
+    const totalLeaves = Game.totalLeavesAllTime || 0;
+    const progress = Math.min(1, Math.log10(Math.max(1, totalLeaves)) / 9);
+    const r = Math.round(62 + (27 - 62) * progress);
+    const g = Math.round(39 + (94 - 39) * progress);
+    const b = Math.round(35 + (32 - 35) * progress);
+    const topColor = `rgb(${Math.round(r*0.5)},${Math.round(g*0.5)},${Math.round(b*0.5)})`;
+    const midColor = `rgb(${r},${g},${b})`;
+    const botColor = `rgb(${Math.round(r*0.7)},${Math.round(g*0.7)},${Math.round(b*0.7)})`;
+    scene.style.background = `linear-gradient(180deg, ${topColor} 0%, ${midColor} 50%, ${botColor} 100%)`;
+
     if (stage >= 3) {
-      // Ancient Groves: majestic, golden light
-      scene.style.background = 'linear-gradient(180deg, #1a1505 0%, #2a2510 20%, #1a3a10 50%, #0d2b0d 80%, #1a4a1a 100%)';
       ground.style.background = 'linear-gradient(180deg, #2E7D32, #1B5E20)';
       this._ensureGoldenRays();
     } else if (stage >= 2) {
-      // Forests: dense trees, blue sky hints
-      scene.style.background = 'linear-gradient(180deg, #0a1525 0%, #122a15 30%, #0d2b0d 60%, #1a4a1a 100%)';
       ground.style.background = 'linear-gradient(180deg, #2E7D32, #1B5E20)';
       this._removeGoldenRays();
     } else if (stage >= 1) {
-      // Trees: green grass, lighter sky
-      scene.style.background = 'linear-gradient(180deg, #151a20 0%, #15251a 40%, #1a301a 70%, #203520 100%)';
       ground.style.background = 'linear-gradient(180deg, #33691E, #2E7D32)';
       this._removeGoldenRays();
     } else if (stage >= 0.5) {
-      // Saplings: sprouts, lighter
-      scene.style.background = 'linear-gradient(180deg, #1a1510 0%, #1a1a12 40%, #1a2015 80%, #1f2a1a 100%)';
       ground.style.background = 'linear-gradient(180deg, #5D4037, #4E342E)';
       this._removeGoldenRays();
     } else {
-      // Bare: brown dirt, gray sky
-      scene.style.background = 'linear-gradient(180deg, #1a1510 0%, #18150e 50%, #1a1208 100%)';
       ground.style.background = 'linear-gradient(180deg, #4E342E, #3E2723)';
       this._removeGoldenRays();
     }
@@ -1918,10 +1919,10 @@ const Game = {
 
   // Generators: id, name, icon, baseCost, baseProduction, producesIndex (-1 = leaves), count, unlockCost
   generators: [
-    { id: 'sapling',  name: 'Sapling',      icon: '🌱', baseCost: 10,      baseProduction: 1,    count: 0, unlockAt: 0 },
-    { id: 'tree',     name: 'Tree',          icon: '🌳', baseCost: 150,     baseProduction: 0.2,  count: 0, unlockAt: 10 },
-    { id: 'forest',   name: 'Forest',        icon: '🌲', baseCost: 5000,    baseProduction: 0.05, count: 0, unlockAt: 150 },
-    { id: 'grove',    name: 'Ancient Grove',  icon: '🏔️', baseCost: 200000,  baseProduction: 0.01, count: 0, unlockAt: 5000 },
+    { id: 'sapling',  name: 'Sapling',      icon: '🌱', baseCost: 30,      baseProduction: 0.6,    count: 0, unlockAt: 0 },
+    { id: 'tree',     name: 'Tree',          icon: '🌳', baseCost: 450,     baseProduction: 0.12,  count: 0, unlockAt: 10 },
+    { id: 'forest',   name: 'Forest',        icon: '🌲', baseCost: 15000,    baseProduction: 0.03, count: 0, unlockAt: 150 },
+    { id: 'grove',    name: 'Ancient Grove',  icon: '🏔️', baseCost: 600000,  baseProduction: 0.006, count: 0, unlockAt: 5000 },
   ],
 
   // Progressive icons for generators
@@ -2132,13 +2133,13 @@ const Game = {
     if (this.essenceUpgradesBought.includes('e_cheap')) baseCost *= 0.85;
 
     if (amount === 1) {
-      return Math.ceil(baseCost * Math.pow(1.15, gen.count));
+      return Math.ceil(baseCost * Math.pow(1.18, gen.count));
     }
 
     // Total cost for buying 'amount'
     let total = 0;
     for (let i = 0; i < amount; i++) {
-      total += Math.ceil(baseCost * Math.pow(1.15, gen.count + i));
+      total += Math.ceil(baseCost * Math.pow(1.18, gen.count + i));
     }
     return total;
   },
@@ -2152,7 +2153,7 @@ const Game = {
     let total = 0;
     let budget = this.leaves;
     while (true) {
-      const next = Math.ceil(baseCost * Math.pow(1.15, gen.count + count));
+      const next = Math.ceil(baseCost * Math.pow(1.18, gen.count + count));
       if (total + next > budget) break;
       total += next;
       count++;
