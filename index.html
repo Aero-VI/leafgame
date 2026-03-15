@@ -8,24 +8,30 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg-dark: #0a0f0a;
-  --bg-panel: #111a11;
-  --bg-card: #1a2a1a;
-  --bg-card-hover: #1f331f;
-  --green-1: #2d5a2d;
-  --green-2: #3a7a3a;
-  --green-3: #4a9a4a;
-  --green-bright: #6fdc6f;
-  --green-glow: #3aff3a;
-  --gold: #ffd700;
-  --gold-dark: #b8960f;
-  --text: #e0e8e0;
-  --text-dim: #8a9a8a;
-  --text-bright: #ffffff;
+  --bg-dark: #1a120b;
+  --bg-panel: #2c1e12;
+  --bg-card: #3d2b1a;
+  --bg-card-hover: #4a3522;
+  --brown-1: #5D4037;
+  --brown-2: #6D4C41;
+  --brown-3: #795548;
+  --green-1: #2E7D32;
+  --green-2: #388E3C;
+  --green-3: #43A047;
+  --green-bright: #66BB6A;
+  --green-glow: #4CAF50;
+  --gold: #FFA000;
+  --gold-bright: #FFD54F;
+  --gold-dark: #E65100;
+  --text: #E8DCC8;
+  --text-dim: #A89880;
+  --text-bright: #FFF8E7;
   --danger: #ff4444;
   --blue: #4488ff;
-  --purple: #aa66ff;
-  --orange: #ff8844;
+  --purple: #CE93D8;
+  --purple-deep: #9C27B0;
+  --orange: #FF8A65;
+  --leaf-border: #5D4037;
 }
 
 html, body {
@@ -50,45 +56,146 @@ html, body {
   overflow: hidden;
 }
 
+/* ===== NEWS TICKER ===== */
+#news-ticker {
+  flex-shrink: 0;
+  background: rgba(30, 20, 10, 0.85);
+  border-bottom: 1px solid rgba(93, 64, 55, 0.5);
+  height: 26px;
+  overflow: hidden;
+  position: relative;
+  z-index: 101;
+  display: flex;
+  align-items: center;
+}
+
+#news-ticker::before {
+  content: '📰';
+  font-size: 0.75em;
+  padding: 0 8px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+#ticker-text {
+  white-space: nowrap;
+  font-size: 0.75em;
+  color: var(--text-dim);
+  font-style: italic;
+  animation: tickerScroll 16s linear infinite;
+  padding-right: 100%;
+}
+
+@keyframes tickerScroll {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+/* ===== TOP BAR ===== */
 #top-bar {
   flex-shrink: 0;
-  background: var(--bg-panel);
-  border-bottom: 1px solid var(--green-1);
-  padding: 8px 12px;
+  background: linear-gradient(180deg, rgba(44, 30, 18, 0.95), rgba(30, 20, 10, 0.95));
+  border-bottom: 2px solid var(--brown-1);
+  padding: 10px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   z-index: 100;
-  min-height: 56px;
+  min-height: 64px;
+  position: relative;
+}
+
+#top-bar::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold) 20%, var(--gold) 80%, transparent);
+  opacity: 0.3;
 }
 
 #leaf-counter {
-  font-size: 1.6em;
-  font-weight: 700;
-  color: var(--green-bright);
-  text-shadow: 0 0 12px rgba(106, 220, 106, 0.4);
+  font-size: 2em;
+  font-weight: 800;
+  color: var(--gold-bright);
+  text-shadow: 0 0 20px rgba(255, 160, 0, 0.5), 0 0 40px rgba(255, 160, 0, 0.2);
   transition: transform 0.1s;
   white-space: nowrap;
+  letter-spacing: -0.02em;
 }
 
 #leaf-counter.pulse {
   transform: scale(1.08);
+  text-shadow: 0 0 30px rgba(255, 160, 0, 0.8), 0 0 60px rgba(255, 160, 0, 0.4);
 }
 
 #lps-display {
   font-size: 0.85em;
-  color: var(--text-dim);
+  color: var(--green-bright);
   margin-top: 2px;
+  font-weight: 600;
 }
 
-#next-unlock {
-  font-size: 0.75em;
+/* ===== NEXT UNLOCK BAR ===== */
+#next-unlock-bar {
+  flex-shrink: 0;
+  background: rgba(30, 20, 10, 0.9);
+  border-bottom: 1px solid rgba(93, 64, 55, 0.3);
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  z-index: 99;
+}
+
+#next-unlock-icon {
+  font-size: 1.2em;
+  flex-shrink: 0;
+}
+
+#next-unlock-info {
+  flex: 1;
+  min-width: 0;
+}
+
+#next-unlock-label {
+  font-size: 0.72em;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#next-unlock-progress-wrap {
+  width: 100%;
+  height: 8px;
+  background: rgba(93, 64, 55, 0.4);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 3px;
+}
+
+#next-unlock-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green-1), var(--green-bright));
+  border-radius: 4px;
+  transition: width 0.3s;
+  width: 0%;
+  box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
+}
+
+#next-unlock-pct {
+  font-size: 0.72em;
   color: var(--gold);
+  font-weight: 700;
+  flex-shrink: 0;
+  min-width: 36px;
   text-align: right;
-  max-width: 45%;
-  line-height: 1.3;
 }
 
+/* ===== MAIN AREA ===== */
 #main-area {
   flex: 1;
   overflow: hidden;
@@ -124,13 +231,24 @@ html, body {
   justify-content: center;
 }
 
-/* Bottom Nav */
+/* ===== BOTTOM NAV ===== */
 #bottom-nav {
   flex-shrink: 0;
   display: flex;
-  background: var(--bg-panel);
-  border-top: 1px solid var(--green-1);
+  background: linear-gradient(180deg, rgba(44, 30, 18, 0.95), rgba(30, 20, 10, 0.98));
+  border-top: 2px solid var(--brown-1);
   z-index: 100;
+  position: relative;
+}
+
+#bottom-nav::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--green-1) 30%, var(--green-1) 70%, transparent);
+  opacity: 0.4;
 }
 
 .nav-btn {
@@ -153,97 +271,241 @@ html, body {
 
 .nav-btn.active {
   color: var(--green-bright);
-  background: rgba(106, 220, 106, 0.08);
+  background: rgba(76, 175, 80, 0.12);
+  border-top: 2px solid var(--green-bright);
+  margin-top: -2px;
 }
 
 .nav-btn .nav-icon { font-size: 1.4em; }
 
+/* ===== BACKGROUND SCENE ===== */
+#bg-scene {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 0;
+  pointer-events: none;
+  transition: background 3s ease;
+}
+
+#bg-trees {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 40%;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+  transition: opacity 2s;
+}
+
+.bg-tree-silhouette {
+  position: absolute;
+  bottom: 0;
+  opacity: 0.15;
+  transition: opacity 2s, transform 2s;
+}
+
+#bg-ground {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 15%;
+  z-index: 2;
+  pointer-events: none;
+  transition: background 3s;
+}
+
+/* Ambient particles */
+.ambient-particle {
+  position: absolute;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0;
+  animation: ambientFloat linear forwards;
+}
+
+@keyframes ambientFloat {
+  0% { opacity: 0; transform: translateX(0) translateY(0); }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.4; }
+  100% { opacity: 0; transform: translateX(var(--drift-x, 100px)) translateY(var(--drift-y, -50px)); }
+}
+
+/* Birds */
+.bg-bird {
+  position: absolute;
+  pointer-events: none;
+  z-index: 4;
+  font-size: 0.9em;
+  opacity: 0;
+  animation: birdFly linear forwards;
+}
+
+@keyframes birdFly {
+  0% { opacity: 0; transform: translateX(0) translateY(0) scaleX(1); }
+  5% { opacity: 0.5; }
+  95% { opacity: 0.3; }
+  100% { opacity: 0; transform: translateX(var(--fly-x, 300px)) translateY(var(--fly-y, -30px)) scaleX(1); }
+}
+
+/* Golden light rays (Ancient Grove stage) */
+.golden-ray {
+  position: absolute;
+  top: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(255, 215, 0, 0.15), transparent 70%);
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  animation: rayPulse 4s ease-in-out infinite;
+}
+
+@keyframes rayPulse {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
 /* ===== CLICK AREA ===== */
 #click-target {
-  width: min(200px, 50vw);
-  height: min(200px, 50vw);
+  width: min(220px, 55vw);
+  height: min(220px, 55vw);
   border-radius: 50%;
-  background: radial-gradient(circle, var(--green-2), var(--green-1));
-  border: 3px solid var(--green-3);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: min(80px, 20vw);
-  transition: transform 0.08s, box-shadow 0.08s;
-  box-shadow: 0 0 30px rgba(106, 220, 106, 0.2);
+  transition: transform 0.08s, filter 0.08s;
   position: relative;
   z-index: 10;
+  background: transparent;
+  border: none;
 }
 
 #click-target:active {
-  transform: scale(0.93);
-  box-shadow: 0 0 50px rgba(106, 220, 106, 0.5);
+  transform: scale(0.92);
+}
+
+/* SVG Plant */
+#plant-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 20px rgba(76, 175, 80, 0.3));
+  transition: filter 0.15s;
+}
+
+#click-target:active #plant-svg {
+  filter: drop-shadow(0 0 40px rgba(76, 175, 80, 0.7)) brightness(1.3);
+}
+
+/* Click pulse ring */
+.click-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid var(--green-bright);
+  opacity: 0;
+  pointer-events: none;
+  animation: clickRing 0.6s ease-out forwards;
+}
+
+@keyframes clickRing {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.8); opacity: 0; }
 }
 
 #click-power-label {
-  font-size: 0.85em;
+  font-size: 0.9em;
   color: var(--text-dim);
-  margin-top: 12px;
+  margin-top: 16px;
+  font-weight: 600;
+  z-index: 10;
+  position: relative;
 }
 
-/* Floating numbers */
+/* Floating numbers — gold themed */
 .float-number {
   position: absolute;
-  color: var(--green-bright);
-  font-weight: 700;
-  font-size: 1.2em;
+  color: var(--gold-bright);
+  font-weight: 800;
+  font-size: 1.4em;
   pointer-events: none;
   z-index: 50;
-  animation: floatUp 1s ease-out forwards;
-  text-shadow: 0 0 6px rgba(106, 220, 106, 0.6);
+  animation: floatUp 1.2s ease-out forwards;
+  text-shadow: 0 0 10px rgba(255, 160, 0, 0.8), 0 2px 4px rgba(0,0,0,0.5);
 }
 
 @keyframes floatUp {
   0% { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(-80px) scale(0.6); }
+  100% { opacity: 0; transform: translateY(-100px) scale(0.5); }
 }
 
-/* Falling leaves background */
+/* ===== CLICK-SPAWNED FALLING LEAVES ===== */
+.click-leaf {
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+  font-size: 1.3em;
+  animation: clickLeafFall linear forwards;
+}
+
+@keyframes clickLeafFall {
+  0% { opacity: 1; transform: translateY(0) translateX(0) rotate(0deg); }
+  100% { opacity: 0; transform: translateY(var(--fall-dist, 400px)) translateX(var(--sway, 50px)) rotate(var(--spin, 720deg)); }
+}
+
+/* Ambient falling leaves */
 .falling-leaf {
   position: absolute;
   font-size: 1.2em;
-  opacity: 0.3;
+  opacity: 0.25;
   pointer-events: none;
   z-index: 1;
   animation: fall linear forwards;
 }
 
 @keyframes fall {
-  0% { transform: translateY(-20px) rotate(0deg); opacity: 0.35; }
-  100% { transform: translateY(calc(100vh + 20px)) rotate(720deg); opacity: 0; }
+  0% { transform: translateY(-20px) translateX(0) rotate(0deg); opacity: 0.3; }
+  50% { transform: translateY(calc(50vh)) translateX(var(--sway-bg, 30px)) rotate(360deg); opacity: 0.25; }
+  100% { transform: translateY(calc(100vh + 20px)) translateX(0) rotate(720deg); opacity: 0; }
 }
 
 /* ===== GENERATORS ===== */
 .gen-card {
-  background: var(--bg-card);
-  border: 1px solid var(--green-1);
-  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(61, 43, 26, 0.9), rgba(44, 30, 18, 0.9));
+  border: 1px solid var(--brown-1);
+  border-radius: 12px;
   padding: 12px;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 10px;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
 }
 
-.gen-card.locked {
-  opacity: 0.4;
+.gen-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(90deg, rgba(76, 175, 80, 0.05), transparent);
   pointer-events: none;
 }
 
+.gen-card.locked {
+  opacity: 0.35;
+  pointer-events: none;
+  filter: grayscale(0.5);
+}
+
 .gen-card.affordable {
-  border-color: var(--green-3);
+  border-color: var(--green-2);
+  box-shadow: 0 0 12px rgba(76, 175, 80, 0.15);
 }
 
 .gen-icon {
-  font-size: 2em;
-  width: 48px;
+  font-size: 2.2em;
+  width: 50px;
   text-align: center;
   flex-shrink: 0;
 }
@@ -265,50 +527,91 @@ html, body {
   margin-top: 2px;
 }
 
+/* Generator production bar */
+.gen-prod-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(93, 64, 55, 0.4);
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.gen-prod-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green-1), var(--green-bright));
+  border-radius: 2px;
+  transition: width 0.5s;
+  animation: prodPulse 2s ease-in-out infinite;
+}
+
+@keyframes prodPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
 .gen-buy-btn {
-  min-width: 80px;
+  min-width: 82px;
   min-height: 44px;
-  border: none;
-  border-radius: 8px;
-  background: var(--green-1);
+  border: 1px solid var(--brown-1);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(93, 64, 55, 0.6), rgba(61, 43, 26, 0.8));
   color: var(--text);
   font-weight: 700;
   font-size: 0.82em;
   cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
+  transition: background 0.2s, transform 0.1s, border-color 0.2s;
   padding: 6px 10px;
   text-align: center;
   line-height: 1.3;
 }
 
 .gen-buy-btn.can-afford {
-  background: var(--green-2);
+  background: linear-gradient(180deg, var(--green-1), #1B5E20);
+  border-color: var(--green-2);
+  color: var(--text-bright);
 }
 
 .gen-buy-btn.can-afford:active {
   transform: scale(0.95);
-  background: var(--green-3);
+  background: linear-gradient(180deg, var(--green-2), var(--green-1));
 }
 
 /* ===== UPGRADES ===== */
 .upgrade-card {
-  background: var(--bg-card);
-  border: 1px solid var(--green-1);
-  border-radius: 10px;
-  padding: 12px;
+  background: linear-gradient(135deg, rgba(61, 43, 26, 0.9), rgba(44, 30, 18, 0.9));
+  border: 1px solid var(--brown-1);
+  border-radius: 12px;
+  padding: 14px;
   margin-bottom: 8px;
   cursor: pointer;
-  transition: border-color 0.2s, opacity 0.3s;
+  transition: border-color 0.2s, opacity 0.3s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.upgrade-card::after {
+  content: '🌿';
+  position: absolute;
+  top: 8px; right: 10px;
+  font-size: 0.8em;
+  opacity: 0.15;
 }
 
 .upgrade-card.purchased {
-  opacity: 0.5;
+  opacity: 0.45;
   pointer-events: none;
-  border-color: var(--green-3);
+  border-color: var(--green-1);
+}
+
+.upgrade-card.purchased::after {
+  content: '✅';
+  opacity: 0.5;
 }
 
 .upgrade-card.affordable {
-  border-color: var(--gold-dark);
+  border-color: var(--gold);
+  box-shadow: 0 0 15px rgba(255, 160, 0, 0.15);
 }
 
 .upgrade-card.cooldown {
@@ -346,12 +649,18 @@ html, body {
 .prestige-info {
   margin: 20px auto;
   max-width: 360px;
+  background: linear-gradient(135deg, rgba(61, 43, 26, 0.6), rgba(30, 20, 10, 0.8));
+  border: 1px solid rgba(156, 39, 176, 0.3);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 0 30px rgba(156, 39, 176, 0.1);
 }
 
 .prestige-info h2 {
   color: var(--purple);
   font-size: 1.5em;
   margin-bottom: 10px;
+  text-shadow: 0 0 20px rgba(156, 39, 176, 0.4);
 }
 
 .prestige-info p {
@@ -366,7 +675,7 @@ html, body {
   min-width: 200px;
   border: 2px solid var(--purple);
   border-radius: 12px;
-  background: rgba(170, 102, 255, 0.1);
+  background: linear-gradient(180deg, rgba(156, 39, 176, 0.15), rgba(156, 39, 176, 0.05));
   color: var(--purple);
   font-weight: 700;
   font-size: 1.1em;
@@ -374,6 +683,7 @@ html, body {
   margin: 20px auto;
   padding: 12px 24px;
   transition: all 0.3s;
+  text-shadow: 0 0 10px rgba(156, 39, 176, 0.3);
 }
 
 .prestige-btn:disabled {
@@ -386,24 +696,28 @@ html, body {
 }
 
 @keyframes prestigeGlow {
-  0%, 100% { box-shadow: 0 0 10px rgba(170, 102, 255, 0.3); }
-  50% { box-shadow: 0 0 30px rgba(170, 102, 255, 0.6); }
+  0%, 100% { box-shadow: 0 0 10px rgba(156, 39, 176, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(156, 39, 176, 0.6), 0 0 80px rgba(156, 39, 176, 0.2); }
 }
 
 .essence-upgrade {
-  background: var(--bg-card);
-  border: 1px solid var(--purple);
-  border-radius: 10px;
-  padding: 12px;
+  background: linear-gradient(135deg, rgba(61, 43, 26, 0.7), rgba(44, 30, 18, 0.7));
+  border: 1px solid rgba(156, 39, 176, 0.4);
+  border-radius: 12px;
+  padding: 14px;
   margin: 8px auto;
   max-width: 360px;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.essence-upgrade:hover {
+  box-shadow: 0 0 15px rgba(156, 39, 176, 0.2);
 }
 
 .essence-upgrade.purchased {
-  opacity: 0.5;
+  opacity: 0.45;
   pointer-events: none;
 }
 
@@ -430,7 +744,7 @@ html, body {
   display: flex;
   justify-content: space-between;
   padding: 10px 4px;
-  border-bottom: 1px solid rgba(106, 220, 106, 0.1);
+  border-bottom: 1px solid rgba(93, 64, 55, 0.2);
   font-size: 0.9em;
 }
 
@@ -438,19 +752,19 @@ html, body {
 .stat-value { color: var(--text-bright); font-weight: 600; }
 
 .stats-section-title {
-  color: var(--green-bright);
+  color: var(--gold);
   font-weight: 700;
   font-size: 1em;
   margin: 16px 0 8px;
   padding-bottom: 4px;
-  border-bottom: 1px solid var(--green-1);
+  border-bottom: 1px solid var(--brown-1);
 }
 
 .danger-btn {
   min-height: 44px;
   border: 1px solid var(--danger);
-  border-radius: 8px;
-  background: transparent;
+  border-radius: 10px;
+  background: rgba(255, 68, 68, 0.08);
   color: var(--danger);
   font-weight: 600;
   font-size: 0.85em;
@@ -467,22 +781,23 @@ html, body {
   top: 8px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(255, 215, 0, 0.15);
+  background: linear-gradient(135deg, rgba(255, 160, 0, 0.2), rgba(255, 215, 0, 0.1));
   border: 1px solid var(--gold);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 8px 16px;
-  color: var(--gold);
+  color: var(--gold-bright);
   font-weight: 700;
   font-size: 0.85em;
   z-index: 90;
   text-align: center;
   max-width: 90%;
   animation: bannerPulse 1s ease-in-out infinite;
+  text-shadow: 0 0 8px rgba(255, 160, 0, 0.5);
 }
 
 @keyframes bannerPulse {
   0%, 100% { box-shadow: 0 0 8px rgba(255, 215, 0, 0.2); }
-  50% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+  50% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.5); }
 }
 
 /* Golden Leaf */
@@ -493,7 +808,7 @@ html, body {
   cursor: pointer;
   z-index: 80;
   animation: goldenSpin 2s linear infinite;
-  filter: drop-shadow(0 0 10px gold);
+  filter: drop-shadow(0 0 15px gold) drop-shadow(0 0 30px rgba(255, 215, 0, 0.5));
 }
 
 @keyframes goldenSpin {
@@ -509,13 +824,14 @@ html, body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.9);
+  background: linear-gradient(135deg, rgba(30, 20, 10, 0.95), rgba(20, 14, 8, 0.98));
   border: 2px solid var(--gold);
   border-radius: 16px;
-  padding: 24px 32px;
+  padding: 28px 36px;
   z-index: 200;
   text-align: center;
   animation: toastIn 0.3s ease-out;
+  box-shadow: 0 0 40px rgba(255, 160, 0, 0.3), 0 0 80px rgba(255, 160, 0, 0.1);
 }
 
 @keyframes toastIn {
@@ -524,10 +840,11 @@ html, body {
 }
 
 #milestone-toast .toast-title {
-  color: var(--gold);
+  color: var(--gold-bright);
   font-size: 1.3em;
-  font-weight: 700;
+  font-weight: 800;
   margin-bottom: 8px;
+  text-shadow: 0 0 15px rgba(255, 160, 0, 0.5);
 }
 
 #milestone-toast .toast-desc {
@@ -551,18 +868,20 @@ html, body {
 }
 
 .offline-box {
-  background: var(--bg-panel);
+  background: linear-gradient(135deg, var(--bg-panel), rgba(30, 20, 10, 0.98));
   border: 2px solid var(--green-2);
   border-radius: 16px;
   padding: 30px;
   text-align: center;
   max-width: 340px;
   margin: 20px;
+  box-shadow: 0 0 40px rgba(76, 175, 80, 0.2);
 }
 
 .offline-box h2 {
   color: var(--green-bright);
   margin-bottom: 12px;
+  text-shadow: 0 0 15px rgba(76, 175, 80, 0.4);
 }
 
 .offline-box p {
@@ -572,18 +891,19 @@ html, body {
 }
 
 .offline-box .earned {
-  color: var(--gold);
+  color: var(--gold-bright);
   font-size: 1.4em;
   font-weight: 700;
   margin: 12px 0;
+  text-shadow: 0 0 10px rgba(255, 160, 0, 0.5);
 }
 
 .offline-box button {
   min-height: 44px;
   min-width: 120px;
   border: none;
-  border-radius: 8px;
-  background: var(--green-2);
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--green-2), var(--green-1));
   color: var(--text-bright);
   font-weight: 700;
   font-size: 1em;
@@ -591,19 +911,10 @@ html, body {
   margin-top: 12px;
 }
 
-/* ===== VISUAL BACKGROUND ===== */
-#bg-scene {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  z-index: 0;
-  pointer-events: none;
-  transition: background 2s;
-}
-
 /* ===== SCROLLBAR ===== */
 .panel::-webkit-scrollbar { width: 4px; }
 .panel::-webkit-scrollbar-track { background: transparent; }
-.panel::-webkit-scrollbar-thumb { background: var(--green-1); border-radius: 4px; }
+.panel::-webkit-scrollbar-thumb { background: var(--brown-1); border-radius: 4px; }
 
 /* ===== MILESTONE BADGES ===== */
 .milestone-badge {
@@ -628,42 +939,206 @@ html, body {
 .buy-amt-btn {
   flex: 1;
   min-height: 36px;
-  border: 1px solid var(--green-1);
-  border-radius: 6px;
-  background: transparent;
+  border: 1px solid var(--brown-1);
+  border-radius: 8px;
+  background: rgba(61, 43, 26, 0.5);
   color: var(--text-dim);
   font-weight: 600;
   font-size: 0.8em;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .buy-amt-btn.active {
   background: var(--green-1);
   color: var(--text-bright);
-  border-color: var(--green-3);
+  border-color: var(--green-2);
+}
+
+/* ===== SOUND TOGGLE ===== */
+#sound-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 110;
+  background: rgba(44, 30, 18, 0.8);
+  border: 1px solid var(--brown-1);
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-size: 1.1em;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+
+#sound-toggle:hover { opacity: 0.8; }
+
+/* ===== MILESTONE BURST ===== */
+.burst-leaf {
+  position: fixed;
+  pointer-events: none;
+  z-index: 199;
+  font-size: 1.5em;
+  animation: burstOut 1.5s ease-out forwards;
+}
+
+@keyframes burstOut {
+  0% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translate(var(--bx), var(--by)) scale(0.3) rotate(var(--br, 360deg)); }
+}
+
+/* ===== RAIN DROPS ===== */
+.rain-drop {
+  position: absolute;
+  width: 2px;
+  height: 12px;
+  background: linear-gradient(180deg, transparent, rgba(100, 180, 255, 0.4));
+  pointer-events: none;
+  z-index: 3;
+  animation: rainFall 0.6s linear forwards;
+}
+
+@keyframes rainFall {
+  0% { opacity: 0.6; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(200px); }
+}
+
+/* Wind streaks */
+.wind-streak {
+  position: absolute;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  pointer-events: none;
+  z-index: 3;
+  animation: windMove 1s linear forwards;
+}
+
+@keyframes windMove {
+  0% { opacity: 0; transform: translateX(0); }
+  30% { opacity: 0.6; }
+  100% { opacity: 0; transform: translateX(var(--wind-dist, 300px)); }
+}
+
+/* Golden sparkles */
+.golden-sparkle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: var(--gold-bright);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+  animation: sparkle 1.5s ease-out forwards;
+  box-shadow: 0 0 6px var(--gold);
+}
+
+@keyframes sparkle {
+  0% { opacity: 1; transform: scale(0) translateY(0); }
+  30% { opacity: 1; transform: scale(1) translateY(-10px); }
+  100% { opacity: 0; transform: scale(0.3) translateY(-60px); }
 }
 </style>
 </head>
 <body>
 <div id="app">
+  <!-- NEWS TICKER -->
+  <div id="news-ticker">
+    <span id="ticker-text">A gentle breeze carries the scent of fresh leaves.</span>
+  </div>
+
   <!-- TOP BAR -->
   <div id="top-bar">
     <div>
       <div id="leaf-counter">🍂 0 Leaves</div>
       <div id="lps-display">0 leaves/sec</div>
     </div>
-    <div id="next-unlock"></div>
+    <button id="sound-toggle" onclick="Sound.toggleAmbient()" title="Toggle Sound">🔊</button>
+  </div>
+
+  <!-- NEXT UNLOCK BAR -->
+  <div id="next-unlock-bar">
+    <div id="next-unlock-icon">🌱</div>
+    <div id="next-unlock-info">
+      <div id="next-unlock-label">Starting out...</div>
+      <div id="next-unlock-progress-wrap">
+        <div id="next-unlock-progress-fill"></div>
+      </div>
+    </div>
+    <div id="next-unlock-pct">0%</div>
   </div>
 
   <!-- MAIN AREA -->
   <div id="main-area">
     <div id="bg-scene"></div>
+    <div id="bg-trees"></div>
+    <div id="bg-ground"></div>
     <div id="event-banner"></div>
     <div id="golden-leaf" onclick="Game.clickGoldenLeaf()">🍂</div>
 
     <!-- Click Panel -->
     <div id="panel-click" class="active">
-      <div id="click-target" onclick="Game.manualClick(event)">🍃</div>
+      <div id="click-target" onclick="Game.manualClick(event)">
+        <svg id="plant-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <!-- Tier 0: Seed/sprout -->
+          <g id="plant-stage-0">
+            <ellipse cx="100" cy="170" rx="30" ry="8" fill="#3E2723" opacity="0.4"/>
+            <path d="M100 170 Q100 150 95 140 Q85 130 80 120 Q85 115 95 118 Q100 120 100 130" fill="#4CAF50" stroke="#388E3C" stroke-width="1"/>
+            <path d="M100 170 Q100 145 108 135 Q115 125 122 118 Q118 115 108 120 Q100 125 100 130" fill="#66BB6A" stroke="#43A047" stroke-width="1"/>
+            <circle cx="100" cy="170" r="6" fill="#5D4037"/>
+          </g>
+          <!-- Tier 1: Small plant -->
+          <g id="plant-stage-1" style="display:none">
+            <ellipse cx="100" cy="175" rx="40" ry="10" fill="#3E2723" opacity="0.3"/>
+            <path d="M100 175 L100 100" stroke="#5D4037" stroke-width="4" stroke-linecap="round"/>
+            <path d="M100 140 Q80 120 65 115" stroke="#388E3C" stroke-width="2" fill="none"/>
+            <path d="M65 115 Q60 105 70 100 Q80 100 85 108 Q80 115 65 115Z" fill="#4CAF50"/>
+            <path d="M100 120 Q120 100 135 98" stroke="#388E3C" stroke-width="2" fill="none"/>
+            <path d="M135 98 Q142 90 138 82 Q130 82 125 88 Q128 95 135 98Z" fill="#66BB6A"/>
+            <path d="M100 100 Q90 85 82 78" stroke="#388E3C" stroke-width="2" fill="none"/>
+            <path d="M82 78 Q75 68 82 62 Q90 65 92 72 Q88 78 82 78Z" fill="#4CAF50"/>
+            <path d="M100 105 Q115 88 125 82" stroke="#43A047" stroke-width="2" fill="none"/>
+            <path d="M125 82 Q132 72 128 65 Q120 68 118 75 Q120 80 125 82Z" fill="#81C784"/>
+          </g>
+          <!-- Tier 2: Tree -->
+          <g id="plant-stage-2" style="display:none">
+            <ellipse cx="100" cy="178" rx="50" ry="12" fill="#3E2723" opacity="0.3"/>
+            <path d="M95 178 L92 90 L108 90 L105 178Z" fill="#5D4037"/>
+            <path d="M92 90 Q60 88 50 75 Q55 55 75 50 Q80 40 100 35 Q120 40 125 50 Q145 55 150 75 Q140 88 108 90Z" fill="#2E7D32"/>
+            <path d="M80 80 Q65 75 58 65 Q65 52 80 48 Q88 42 100 40 Q100 55 90 65 Q85 72 80 80Z" fill="#388E3C"/>
+            <path d="M120 80 Q135 75 142 65 Q135 52 120 48 Q112 42 100 40 Q100 55 110 65 Q115 72 120 80Z" fill="#43A047"/>
+            <circle cx="70" cy="60" r="12" fill="#388E3C" opacity="0.7"/>
+            <circle cx="130" cy="60" r="12" fill="#388E3C" opacity="0.6"/>
+            <circle cx="100" cy="42" r="14" fill="#2E7D32" opacity="0.8"/>
+          </g>
+          <!-- Tier 3: Majestic tree -->
+          <g id="plant-stage-3" style="display:none">
+            <ellipse cx="100" cy="180" rx="60" ry="14" fill="#3E2723" opacity="0.25"/>
+            <!-- Trunk with roots -->
+            <path d="M90 180 Q85 160 88 100 L112 100 Q115 160 110 180Z" fill="#5D4037"/>
+            <path d="M88 180 Q70 178 60 182" stroke="#5D4037" stroke-width="3" fill="none"/>
+            <path d="M112 180 Q130 178 140 182" stroke="#5D4037" stroke-width="3" fill="none"/>
+            <!-- Massive canopy -->
+            <ellipse cx="100" cy="65" rx="65" ry="55" fill="#1B5E20"/>
+            <ellipse cx="75" cy="60" rx="30" ry="25" fill="#2E7D32" opacity="0.8"/>
+            <ellipse cx="125" cy="60" rx="30" ry="25" fill="#2E7D32" opacity="0.8"/>
+            <ellipse cx="100" cy="40" rx="35" ry="28" fill="#388E3C" opacity="0.7"/>
+            <ellipse cx="60" cy="75" rx="20" ry="18" fill="#2E7D32" opacity="0.6"/>
+            <ellipse cx="140" cy="75" rx="20" ry="18" fill="#2E7D32" opacity="0.6"/>
+            <!-- Golden highlights -->
+            <ellipse cx="85" cy="45" rx="12" ry="10" fill="#FFD54F" opacity="0.1"/>
+            <ellipse cx="115" cy="50" rx="10" ry="8" fill="#FFD54F" opacity="0.08"/>
+            <!-- Sparkle dots -->
+            <circle cx="70" cy="50" r="2" fill="#FFD54F" opacity="0.4"/>
+            <circle cx="120" cy="40" r="2" fill="#FFD54F" opacity="0.3"/>
+            <circle cx="90" cy="30" r="1.5" fill="#FFD54F" opacity="0.5"/>
+            <circle cx="130" cy="55" r="1.5" fill="#FFD54F" opacity="0.35"/>
+          </g>
+        </svg>
+      </div>
       <div id="click-power-label">+1 per click</div>
     </div>
 
@@ -749,62 +1224,541 @@ html, body {
 </div>
 
 <script>
-// ===== SOUND ENGINE =====
+// ===== NEWS TICKER =====
+const Ticker = {
+  messages: {
+    early: [
+      "A gentle breeze carries the scent of fresh leaves.",
+      "Your first sapling stretches toward the sun.",
+      "Local butterfly visits your garden. How nice.",
+      "Fun fact: a single tree can produce 200,000 leaves per year.",
+      "The soil is rich and ready for growth.",
+      "A ladybug has taken up residence on your sapling.",
+      "The morning dew glistens on your tiny sprout.",
+      "A worm wiggles approvingly near your garden.",
+      "Somewhere, a seed dreams of becoming a mighty oak.",
+      "The wind carries a single leaf across the field.",
+      "Scientists confirm: plants are, indeed, pretty neat.",
+      "Your garden has attracted its first bee. Progress!",
+      "A cloud passes overhead, providing gentle shade.",
+      "The earth hums with the quiet potential of growth.",
+    ],
+    mid: [
+      "Your saplings have started whispering to each other at night.",
+      "A sapling was found hoarding leaves. Investigation pending.",
+      "MISSING: One squirrel. Last seen near the Ancient Grove. Probably fine.",
+      "Your forest has developed a primitive economy. They use acorns as currency.",
+      "Local mushroom network reports: 'The trees are planning something.'",
+      "A tree fell in your forest. It screamed.",
+      "Your saplings have unionized. They want blood meal.",
+      "Warning: Do not make eye contact with the Ancient Grove.",
+      "The leaves are watching. They've always been watching.",
+      "Scientists discover that leaves are, in fact, just flat trees.",
+      "Local sapling achieves sentience, demands better sunlight.",
+      "Breaking: Ancient Grove elder tree reports record photosynthesis output.",
+      "Weather report: Sunny with a chance of golden leaves.",
+      "Leaf economy booming — investors predict trillion-leaf milestone by Thursday.",
+      "Exclusive: Forest union demands shorter winters.",
+      "Your saplings have unionized. They want more water.",
+      "A mysterious wind carries whispers of a forgotten grove...",
+      "Botanists baffled by player's unnaturally productive forest.",
+      "New study: clicking leaves actually does make them grow faster.",
+      "Your forest has been nominated for 'Best Ecosystem 2026'.",
+      "Ancient oak shares wisdom: 'Just keep clicking.'",
+      "Pollen count: extreme. Allergists concerned.",
+      "Local squirrel impressed by your leaf collection.",
+      "The mushrooms have started forming geometric patterns. Coincidence?",
+      "A tree was overheard telling a knock-knock joke. Nobody laughed.",
+    ],
+    late: [
+      "The forest has consumed three neighboring towns. Productivity is up.",
+      "Your Ancient Grove has achieved consciousness. It wants a raise.",
+      "The UN has classified your forest as a sovereign nation.",
+      "Scientists can no longer explain where the leaves are coming from.",
+      "A tree tried to file taxes. The IRS is confused.",
+      "The forest floor is now 40 feet deep in leaves. Nobody can leave.",
+      "Your forest has begun absorbing the concept of time itself.",
+      "BREAKING: Your forest has declared war on winter. Winter surrendered.",
+      "The leaves have started clicking YOU.",
+      "There is no game. There are only leaves now.",
+      "You are the forest. The forest is you. Click.",
+      "NASA reports your forest is now visible from space.",
+      "The Ancient Grove has written a novel. Critics call it 'deeply rooted.'",
+      "Your leaves have developed their own language. Linguists are crying.",
+      "Time flows differently inside your forest. Clocks run on sap.",
+      "A philosopher asked 'if a tree falls and no one hears it?' Your forest ate him.",
+      "The ocean called. It wants to know your secret.",
+      "Your forest has started a podcast. It's called 'Leaves of Absence.'",
+      "Reality bends near the Ancient Grove. Physics professors resign.",
+      "The leaves whisper coordinates. You're afraid to look them up.",
+      "Local news: 'Everything is leaves now. We accept our new overlords.'",
+    ],
+  },
+  lastChange: 0,
+  interval: 8000,
+
+  getMessage() {
+    const leaves = Game.totalLeavesAllTime || 0;
+    let pool;
+    if (leaves < 1000) pool = this.messages.early;
+    else if (leaves < 1e6) pool = this.messages.mid;
+    else pool = this.messages.late;
+    return pool[Math.floor(Math.random() * pool.length)];
+  },
+
+  update() {
+    const now = Date.now();
+    if (now - this.lastChange < this.interval) return;
+    this.lastChange = now;
+    const el = document.getElementById('ticker-text');
+    if (!el) return;
+    el.style.animation = 'none';
+    el.offsetHeight; // reflow
+    el.textContent = this.getMessage();
+    el.style.animation = 'tickerScroll 16s linear infinite';
+  }
+};
+
+// ===== ENHANCED SOUND ENGINE =====
 const Sound = {
   ctx: null,
+  ambientEnabled: true,
+  ambientNodes: [],
+  ambientStarted: false,
+  masterGain: null,
+
   init() {
     if (this.ctx) return;
-    try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+      this.masterGain.connect(this.ctx.destination);
+    } catch(e) {}
   },
-  play(type) {
-    if (!this.ctx) return;
+
+  toggleAmbient() {
+    this.ambientEnabled = !this.ambientEnabled;
+    document.getElementById('sound-toggle').textContent = this.ambientEnabled ? '🔊' : '🔇';
+    if (this.masterGain) {
+      this.masterGain.gain.setValueAtTime(this.ambientEnabled ? 0.5 : 0, this.ctx.currentTime);
+    }
+    if (this.ambientEnabled && !this.ambientStarted) {
+      this.startAmbient();
+    }
+  },
+
+  startAmbient() {
+    if (!this.ctx || this.ambientStarted) return;
+    this.ambientStarted = true;
+    this._ambientLoop();
+  },
+
+  _ambientLoop() {
+    if (!this.ambientEnabled || !this.ctx) return;
+    // Random nature sounds every 3-8 seconds
+    const delay = 3000 + Math.random() * 5000;
+    setTimeout(() => {
+      if (!this.ambientEnabled) { this.ambientStarted = false; return; }
+      const sounds = ['cricket', 'bird_chirp', 'wind_soft'];
+      this._playAmbientSound(sounds[Math.floor(Math.random() * sounds.length)]);
+      this._ambientLoop();
+    }, delay);
+  },
+
+  _playAmbientSound(type) {
+    if (!this.ctx || !this.ambientEnabled) return;
     try {
       const now = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      const filter = this.ctx.createBiquadFilter();
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain);
+
+      if (type === 'cricket') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(4000 + Math.random() * 1000, now);
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(4500, now);
+        filter.Q.setValueAtTime(5, now);
+        gain.gain.setValueAtTime(0, now);
+        // Chirp pattern
+        for (let i = 0; i < 3; i++) {
+          const t = now + i * 0.12;
+          gain.gain.setValueAtTime(0.03, t);
+          gain.gain.setValueAtTime(0, t + 0.05);
+        }
+        osc.start(now);
+        osc.stop(now + 0.5);
+      } else if (type === 'bird_chirp') {
+        osc.type = 'sine';
+        filter.type = 'highpass';
+        filter.frequency.setValueAtTime(1000, now);
+        osc.frequency.setValueAtTime(2000 + Math.random() * 1000, now);
+        osc.frequency.exponentialRampToValueAtTime(3000 + Math.random() * 1000, now + 0.1);
+        osc.frequency.exponentialRampToValueAtTime(1800 + Math.random() * 500, now + 0.2);
+        gain.gain.setValueAtTime(0.04, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } else if (type === 'wind_soft') {
+        // White noise wind
+        const bufferSize = this.ctx.sampleRate * 0.8;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.3;
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const windFilter = this.ctx.createBiquadFilter();
+        windFilter.type = 'lowpass';
+        windFilter.frequency.setValueAtTime(400 + Math.random() * 300, now);
+        windFilter.Q.setValueAtTime(1, now);
+        noise.connect(windFilter);
+        windFilter.connect(gain);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.06, now + 0.3);
+        gain.gain.linearRampToValueAtTime(0, now + 0.8);
+        noise.start(now);
+        noise.stop(now + 0.8);
+        return; // separate path, no osc
+      }
+    } catch(e) {}
+  },
+
+  play(type) {
+    if (!this.ctx || !this.ambientEnabled) return;
+    try {
+      const now = this.ctx.currentTime;
+
       if (type === 'click') {
-        osc.frequency.setValueAtTime(800, now);
-        osc.frequency.exponentialRampToValueAtTime(400, now + 0.08);
-        gain.gain.setValueAtTime(0.08, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-        osc.start(now); osc.stop(now + 0.1);
-      } else if (type === 'buy') {
-        osc.frequency.setValueAtTime(523, now);
-        osc.frequency.setValueAtTime(659, now + 0.06);
-        osc.frequency.setValueAtTime(784, now + 0.12);
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-        osc.start(now); osc.stop(now + 0.2);
-      } else if (type === 'milestone') {
-        const osc2 = this.ctx.createOscillator();
-        const gain2 = this.ctx.createGain();
-        osc2.connect(gain2); gain2.connect(this.ctx.destination);
-        osc.frequency.setValueAtTime(523, now);
-        osc.frequency.setValueAtTime(659, now + 0.15);
-        osc.frequency.setValueAtTime(784, now + 0.3);
+        // Leaf rustle - noise burst
+        const bufferSize = this.ctx.sampleRate * 0.08;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1);
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(3000 + Math.random() * 2000, now);
+        filter.Q.setValueAtTime(2, now);
+        const gain = this.ctx.createGain();
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
         gain.gain.setValueAtTime(0.12, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
-        osc.start(now); osc.stop(now + 0.6);
-        osc2.type = 'triangle';
-        osc2.frequency.setValueAtTime(1047, now + 0.35);
-        gain2.gain.setValueAtTime(0.08, now + 0.35);
-        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
-        osc2.start(now + 0.35); osc2.stop(now + 0.7);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        noise.start(now);
+        noise.stop(now + 0.08);
+      } else if (type === 'buy') {
+        // Gentle chime
+        [523, 659, 784].forEach((f, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.connect(gain);
+          gain.connect(this.masterGain);
+          osc.frequency.setValueAtTime(f, now + i * 0.06);
+          gain.gain.setValueAtTime(0.08, now + i * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.25);
+          osc.start(now + i * 0.06);
+          osc.stop(now + i * 0.06 + 0.25);
+        });
+      } else if (type === 'milestone') {
+        // Bird chirp fanfare
+        const notes = [523, 659, 784, 1047, 1319];
+        notes.forEach((f, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = i < 3 ? 'triangle' : 'sine';
+          osc.connect(gain);
+          gain.connect(this.masterGain);
+          osc.frequency.setValueAtTime(f, now + i * 0.12);
+          osc.frequency.exponentialRampToValueAtTime(f * 1.02, now + i * 0.12 + 0.1);
+          gain.gain.setValueAtTime(0.1, now + i * 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.4);
+          osc.start(now + i * 0.12);
+          osc.stop(now + i * 0.12 + 0.4);
+        });
       } else if (type === 'prestige') {
-        [523, 659, 784, 1047].forEach((f, i) => {
-          const o = this.ctx.createOscillator();
-          const g = this.ctx.createGain();
-          o.type = 'sine';
-          o.connect(g); g.connect(this.ctx.destination);
-          o.frequency.setValueAtTime(f, now + i * 0.15);
-          g.gain.setValueAtTime(0.1, now + i * 0.15);
-          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.4);
-          o.start(now + i * 0.15); o.stop(now + i * 0.15 + 0.4);
+        // Wind whoosh + magical tone
+        // Whoosh
+        const bufferSize = this.ctx.sampleRate * 1.5;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1);
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(200, now);
+        filter.frequency.exponentialRampToValueAtTime(2000, now + 0.5);
+        filter.frequency.exponentialRampToValueAtTime(200, now + 1.5);
+        filter.Q.setValueAtTime(3, now);
+        const whooshGain = this.ctx.createGain();
+        noise.connect(filter);
+        filter.connect(whooshGain);
+        whooshGain.connect(this.masterGain);
+        whooshGain.gain.setValueAtTime(0, now);
+        whooshGain.gain.linearRampToValueAtTime(0.15, now + 0.3);
+        whooshGain.gain.linearRampToValueAtTime(0, now + 1.5);
+        noise.start(now);
+        noise.stop(now + 1.5);
+        // Magical ascending tones
+        [392, 523, 659, 784, 1047].forEach((f, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.connect(gain);
+          gain.connect(this.masterGain);
+          osc.frequency.setValueAtTime(f, now + 0.3 + i * 0.15);
+          gain.gain.setValueAtTime(0.08, now + 0.3 + i * 0.15);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3 + i * 0.15 + 0.6);
+          osc.start(now + 0.3 + i * 0.15);
+          osc.stop(now + 0.3 + i * 0.15 + 0.6);
         });
       }
     } catch(e) {}
+  }
+};
+
+// ===== VISUAL ENGINE =====
+const Visuals = {
+  currentStage: -1,
+  particleTimer: 0,
+
+  getStage() {
+    const gens = Game.generators;
+    if (gens[3].count >= 1) return 3; // Ancient Groves
+    if (gens[2].count >= 1) return 2; // Forests
+    if (gens[1].count >= 1) return 1; // Trees
+    if (gens[0].count >= 5) return 0.5; // Saplings growing
+    return 0;
+  },
+
+  updatePlant() {
+    const stage = this.getStage();
+    const stageIndex = stage >= 3 ? 3 : stage >= 2 ? 2 : stage >= 1 ? 1 : 0;
+    if (stageIndex === this.currentStage) return;
+    this.currentStage = stageIndex;
+
+    for (let i = 0; i <= 3; i++) {
+      const el = document.getElementById('plant-stage-' + i);
+      if (el) el.style.display = i === stageIndex ? 'block' : 'none';
+    }
+  },
+
+  updateBackground() {
+    const stage = this.getStage();
+    const scene = document.getElementById('bg-scene');
+    const ground = document.getElementById('bg-ground');
+    const treesEl = document.getElementById('bg-trees');
+
+    if (stage >= 3) {
+      // Ancient Groves: majestic, golden light
+      scene.style.background = 'linear-gradient(180deg, #1a1505 0%, #2a2510 20%, #1a3a10 50%, #0d2b0d 80%, #1a4a1a 100%)';
+      ground.style.background = 'linear-gradient(180deg, #2E7D32, #1B5E20)';
+      this._ensureGoldenRays();
+    } else if (stage >= 2) {
+      // Forests: dense trees, blue sky hints
+      scene.style.background = 'linear-gradient(180deg, #0a1525 0%, #122a15 30%, #0d2b0d 60%, #1a4a1a 100%)';
+      ground.style.background = 'linear-gradient(180deg, #2E7D32, #1B5E20)';
+      this._removeGoldenRays();
+    } else if (stage >= 1) {
+      // Trees: green grass, lighter sky
+      scene.style.background = 'linear-gradient(180deg, #151a20 0%, #15251a 40%, #1a301a 70%, #203520 100%)';
+      ground.style.background = 'linear-gradient(180deg, #33691E, #2E7D32)';
+      this._removeGoldenRays();
+    } else if (stage >= 0.5) {
+      // Saplings: sprouts, lighter
+      scene.style.background = 'linear-gradient(180deg, #1a1510 0%, #1a1a12 40%, #1a2015 80%, #1f2a1a 100%)';
+      ground.style.background = 'linear-gradient(180deg, #5D4037, #4E342E)';
+      this._removeGoldenRays();
+    } else {
+      // Bare: brown dirt, gray sky
+      scene.style.background = 'linear-gradient(180deg, #1a1510 0%, #18150e 50%, #1a1208 100%)';
+      ground.style.background = 'linear-gradient(180deg, #4E342E, #3E2723)';
+      this._removeGoldenRays();
+    }
+
+    // Tree silhouettes
+    this._updateTreeSilhouettes(stage);
+  },
+
+  _updateTreeSilhouettes(stage) {
+    const container = document.getElementById('bg-trees');
+    if (stage < 1) {
+      container.innerHTML = '';
+      return;
+    }
+    // Only update occasionally
+    if (container.dataset.stage === String(Math.floor(stage))) return;
+    container.dataset.stage = String(Math.floor(stage));
+
+    container.innerHTML = '';
+    const treeCount = stage >= 3 ? 12 : stage >= 2 ? 8 : 4;
+    for (let i = 0; i < treeCount; i++) {
+      const tree = document.createElement('div');
+      tree.className = 'bg-tree-silhouette';
+      const x = (i / treeCount) * 100 + (Math.random() * 10 - 5);
+      const h = 40 + Math.random() * 40;
+      const w = 20 + Math.random() * 15;
+      const opacity = 0.08 + Math.random() * 0.12;
+      const color = stage >= 3 ? '#1B5E20' : stage >= 2 ? '#2E7D32' : '#33691E';
+
+      tree.style.cssText = `left:${x}%;width:${w}px;height:${h}%;opacity:${opacity};`;
+      tree.innerHTML = `<svg viewBox="0 0 40 80" width="${w}" height="100%" preserveAspectRatio="xMidYMax">
+        <rect x="17" y="50" width="6" height="30" fill="#3E2723" opacity="0.6"/>
+        <ellipse cx="20" cy="35" rx="${12 + Math.random()*8}" ry="${20 + Math.random()*10}" fill="${color}"/>
+      </svg>`;
+      container.appendChild(tree);
+    }
+  },
+
+  _ensureGoldenRays() {
+    const scene = document.getElementById('bg-scene');
+    if (scene.querySelector('.golden-ray')) return;
+    for (let i = 0; i < 5; i++) {
+      const ray = document.createElement('div');
+      ray.className = 'golden-ray';
+      ray.style.left = (15 + i * 18 + Math.random() * 5) + '%';
+      ray.style.animationDelay = (i * 0.8) + 's';
+      ray.style.width = (2 + Math.random() * 3) + 'px';
+      scene.appendChild(ray);
+    }
+  },
+
+  _removeGoldenRays() {
+    document.querySelectorAll('.golden-ray').forEach(r => r.remove());
+  },
+
+  // Spawn ambient particles (pollen/dandelion)
+  spawnAmbientParticle() {
+    const mainArea = document.getElementById('main-area');
+    if (!mainArea) return;
+    const p = document.createElement('div');
+    p.className = 'ambient-particle';
+    const isGolden = this.getStage() >= 3;
+    p.textContent = isGolden ? '✦' : (Math.random() > 0.5 ? '·' : '○');
+    p.style.cssText = `
+      left:${Math.random() * 100}%;
+      top:${20 + Math.random() * 60}%;
+      font-size:${isGolden ? 0.6 : 0.4}em;
+      color:${isGolden ? '#FFD54F' : 'rgba(255,255,255,0.4)'};
+      --drift-x:${80 + Math.random() * 120}px;
+      --drift-y:${-30 - Math.random() * 60}px;
+      animation-duration:${6 + Math.random() * 6}s;
+    `;
+    mainArea.appendChild(p);
+    setTimeout(() => p.remove(), 12000);
+  },
+
+  // Birds (forests+)
+  spawnBird() {
+    if (this.getStage() < 2) return;
+    const mainArea = document.getElementById('main-area');
+    if (!mainArea) return;
+    const bird = document.createElement('div');
+    bird.className = 'bg-bird';
+    bird.textContent = '🐦';
+    const fromLeft = Math.random() > 0.5;
+    bird.style.cssText = `
+      ${fromLeft ? 'left:-20px' : 'right:-20px'};
+      top:${10 + Math.random() * 30}%;
+      --fly-x:${fromLeft ? 300 + Math.random() * 200 : -300 - Math.random() * 200}px;
+      --fly-y:${-20 + Math.random() * 40}px;
+      animation-duration:${5 + Math.random() * 5}s;
+      ${fromLeft ? '' : 'transform:scaleX(-1);'}
+    `;
+    mainArea.appendChild(bird);
+    setTimeout(() => bird.remove(), 10000);
+  },
+
+  // Event particles
+  spawnEventParticles() {
+    if (!Game.activeEvent) return;
+    const mainArea = document.getElementById('main-area');
+    if (!mainArea) return;
+    const eventId = Game.activeEvent.id;
+
+    if (eventId === 'rain') {
+      for (let i = 0; i < 3; i++) {
+        const drop = document.createElement('div');
+        drop.className = 'rain-drop';
+        drop.style.left = Math.random() * 100 + '%';
+        drop.style.top = Math.random() * 30 + '%';
+        mainArea.appendChild(drop);
+        setTimeout(() => drop.remove(), 600);
+      }
+    } else if (eventId === 'sunburst') {
+      const sparkle = document.createElement('div');
+      sparkle.className = 'golden-sparkle';
+      sparkle.style.left = Math.random() * 100 + '%';
+      sparkle.style.top = Math.random() * 80 + '%';
+      mainArea.appendChild(sparkle);
+      setTimeout(() => sparkle.remove(), 1500);
+    } else if (eventId === 'windstorm') {
+      const streak = document.createElement('div');
+      streak.className = 'wind-streak';
+      streak.style.left = '-50px';
+      streak.style.top = (10 + Math.random() * 70) + '%';
+      streak.style.width = (80 + Math.random() * 120) + 'px';
+      streak.style.setProperty('--wind-dist', (300 + Math.random() * 200) + 'px');
+      mainArea.appendChild(streak);
+      setTimeout(() => streak.remove(), 1000);
+    }
+  },
+
+  // Milestone leaf burst
+  burstLeaves() {
+    const leaves = ['🍂', '🍃', '🌿', '☘️', '🍁'];
+    for (let i = 0; i < 20; i++) {
+      const leaf = document.createElement('div');
+      leaf.className = 'burst-leaf';
+      leaf.textContent = leaves[Math.floor(Math.random() * leaves.length)];
+      const angle = (Math.PI * 2 / 20) * i + Math.random() * 0.3;
+      const dist = 100 + Math.random() * 200;
+      leaf.style.left = '50%';
+      leaf.style.top = '50%';
+      leaf.style.setProperty('--bx', Math.cos(angle) * dist + 'px');
+      leaf.style.setProperty('--by', Math.sin(angle) * dist + 'px');
+      leaf.style.setProperty('--br', (Math.random() * 720 - 360) + 'deg');
+      leaf.style.animationDelay = (Math.random() * 0.2) + 's';
+      document.body.appendChild(leaf);
+      setTimeout(() => leaf.remove(), 1700);
+    }
+  },
+
+  // Click-spawned falling leaf
+  spawnClickLeaf(x, y) {
+    const mainArea = document.getElementById('main-area');
+    if (!mainArea) return;
+    const leafChars = ['🍂', '🍃', '🍁', '🌿'];
+    const colors = ['green', 'yellow', 'orange', 'red'];
+    const count = 1 + Math.floor(Math.random() * 2);
+
+    for (let i = 0; i < count; i++) {
+      const leaf = document.createElement('div');
+      leaf.className = 'click-leaf';
+      leaf.textContent = leafChars[Math.floor(Math.random() * leafChars.length)];
+      const rect = mainArea.getBoundingClientRect();
+      const localX = x - rect.left + (Math.random() * 40 - 20);
+      const localY = y - rect.top;
+      const fallDist = 200 + Math.random() * 300;
+      const sway = (Math.random() * 120 - 60);
+      const spin = (Math.random() * 720 - 360);
+      leaf.style.left = localX + 'px';
+      leaf.style.top = localY + 'px';
+      leaf.style.setProperty('--fall-dist', fallDist + 'px');
+      leaf.style.setProperty('--sway', sway + 'px');
+      leaf.style.setProperty('--spin', spin + 'deg');
+      leaf.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      leaf.style.animationDelay = (i * 0.1) + 's';
+      mainArea.appendChild(leaf);
+      setTimeout(() => leaf.remove(), 3500);
+    }
   }
 };
 
@@ -866,6 +1820,14 @@ const Game = {
     { id: 'grove',    name: 'Ancient Grove',  icon: '🏔️', baseCost: 200000,  baseProduction: 0.01, count: 0, unlockAt: 5000 },
   ],
 
+  // Progressive icons for generators
+  genIcons: [
+    ['🌱', '🌿', '☘️', '🍀', '🌱'],   // sapling stages
+    ['🌳', '🌳', '🌳', '🌳'],           // tree
+    ['🌲', '🌲', '🌲', '🌲'],           // forest
+    ['🏔️', '🏔️', '🏔️', '🏔️'],         // grove
+  ],
+
   // Upgrades
   upgrades: [
     { id: 'photo',     name: 'Photosynthesis Boost', desc: 'All plant production ×3',                   cost: 500,    bought: false, type: 'multiplier' },
@@ -920,9 +1882,22 @@ const Game = {
     setInterval(() => this.save(), 30000);
     // Falling leaves
     setInterval(() => this.spawnFallingLeaf(), 2000);
+    // Ambient particles
+    setInterval(() => Visuals.spawnAmbientParticle(), 3000);
+    // Birds
+    setInterval(() => Visuals.spawnBird(), 8000);
+    // Event particles
+    setInterval(() => Visuals.spawnEventParticles(), 150);
+    // News ticker
+    setInterval(() => Ticker.update(), 1000);
+    Ticker.lastChange = 0;
+    Ticker.update();
 
     // Sound init on first interaction
-    document.addEventListener('pointerdown', () => Sound.init(), { once: true });
+    document.addEventListener('pointerdown', () => {
+      Sound.init();
+      if (!Sound.ambientStarted && Sound.ambientEnabled) Sound.startAmbient();
+    }, { once: true });
   },
 
   // ===== TICK =====
@@ -1094,11 +2069,21 @@ const Game = {
     this.totalClicks++;
     this.clickPower = power;
 
+    // Get click position
+    const x = (event.clientX || event.touches?.[0]?.clientX || window.innerWidth / 2);
+    const y = (event.clientY || event.touches?.[0]?.clientY || window.innerHeight / 2);
+
     // Floating number
-    const rect = event.target.getBoundingClientRect();
-    const x = (event.clientX || event.touches?.[0]?.clientX || rect.left + rect.width / 2);
-    const y = (event.clientY || event.touches?.[0]?.clientY || rect.top);
     this.spawnFloatingNumber(x, y, '+' + fmt(power));
+
+    // Spawn falling leaves on click
+    Visuals.spawnClickLeaf(x, y);
+
+    // Click ring effect
+    const ring = document.createElement('div');
+    ring.className = 'click-ring';
+    document.getElementById('click-target').appendChild(ring);
+    setTimeout(() => ring.remove(), 600);
 
     // Pulse counter
     const counter = document.getElementById('leaf-counter');
@@ -1113,7 +2098,7 @@ const Game = {
     el.style.left = (x + (Math.random() * 40 - 20)) + 'px';
     el.style.top = y + 'px';
     document.getElementById('main-area').appendChild(el);
-    setTimeout(() => el.remove(), 1000);
+    setTimeout(() => el.remove(), 1200);
   },
 
   buyGenerator(index) {
@@ -1206,6 +2191,7 @@ const Game = {
         this.milestonesAchieved.push(ms.id);
         Sound.play('milestone');
         this.showToast('🏆 ' + ms.name, ms.desc);
+        Visuals.burstLeaves();
       }
     }
   },
@@ -1292,6 +2278,18 @@ const Game = {
   },
 
   // ===== RENDERING =====
+  getGenIcon(index) {
+    const gen = this.generators[index];
+    const count = Math.floor(gen.count);
+    if (index === 0) {
+      if (count >= 50) return '🍀';
+      if (count >= 25) return '☘️';
+      if (count >= 10) return '🌿';
+      return '🌱';
+    }
+    return gen.icon;
+  },
+
   renderGenerators() {
     const list = document.getElementById('gen-list');
     list.innerHTML = '';
@@ -1308,11 +2306,19 @@ const Game = {
         ? fmt(gen.count * gen.baseProduction * this.getProductionMultiplier() * (this.milestonesAchieved.includes('m_sap10') ? 2 : 1)) + ' leaves/s'
         : fmt(gen.count * gen.baseProduction * this.getProductionMultiplier()) + ' ' + this.generators[i-1].name.toLowerCase() + 's/s';
 
+      // Production bar width (relative scale)
+      const lps = this.getLPS();
+      let barWidth = 0;
+      if (gen.count > 0 && lps > 0) {
+        barWidth = Math.min(100, (gen.count / (gen.count + 10)) * 100);
+      }
+
       card.innerHTML = `
-        <div class="gen-icon">${gen.icon}</div>
+        <div class="gen-icon">${this.getGenIcon(i)}</div>
         <div class="gen-info">
           <div class="gen-name">${gen.name} <span style="color:var(--green-bright)">(${fmt(Math.floor(gen.count))})</span></div>
           <div class="gen-detail">${unlocked ? prodRate : 'Unlock at ' + fmt(gen.unlockAt) + ' total leaves'}</div>
+          ${unlocked && gen.count > 0 ? `<div class="gen-prod-bar"><div class="gen-prod-fill" style="width:${barWidth}%"></div></div>` : ''}
         </div>
         <button class="gen-buy-btn ${canAfford ? 'can-afford' : ''}" onclick="Game.buyGenerator(${i})" ${!canAfford || !unlocked ? '' : ''}>
           ${this.buyAmount === -1 ? 'Max (' + cost.count + ')' : '×' + this.buyAmount}<br>🍂 ${fmt(cost.cost)}
@@ -1363,7 +2369,7 @@ const Game = {
 
   renderEssenceUpgrades() {
     document.getElementById('essence-display').innerHTML = `
-      <p style="font-size:1.2em;color:var(--purple);font-weight:700">✨ ${this.natureEssence} Nature Essence</p>
+      <p style="font-size:1.2em;color:var(--purple);font-weight:700;text-shadow:0 0 15px rgba(156,39,176,0.4)">✨ ${this.natureEssence} Nature Essence</p>
       <p style="font-size:0.85em;color:var(--text-dim)">Prestiges: ${this.totalPrestiges}</p>
     `;
 
@@ -1433,11 +2439,12 @@ const Game = {
     // Click power label
     document.getElementById('click-power-label').textContent = '+' + fmt(this.getClickPower()) + ' per click';
 
-    // Next unlock
+    // Update next unlock bar
     this.updateNextUnlock();
 
-    // Update background
-    this.updateBackground();
+    // Update visuals
+    Visuals.updatePlant();
+    Visuals.updateBackground();
 
     // Update active panel generator affordability
     if (this.activePanel === 'generators') {
@@ -1460,51 +2467,49 @@ const Game = {
   },
 
   updateNextUnlock() {
-    const el = document.getElementById('next-unlock');
+    const iconEl = document.getElementById('next-unlock-icon');
+    const labelEl = document.getElementById('next-unlock-label');
+    const fillEl = document.getElementById('next-unlock-progress-fill');
+    const pctEl = document.getElementById('next-unlock-pct');
+
     // Find next locked generator
     for (const gen of this.generators) {
       if (gen.count === 0 && this.totalLeavesAllTime < gen.unlockAt) {
-        const pct = Math.min(100, (this.totalLeavesAllTime / gen.unlockAt * 100)).toFixed(0);
-        el.innerHTML = `Next: <strong>${gen.name}</strong><br>${fmt(this.totalLeavesAllTime)} / ${fmt(gen.unlockAt)} (${pct}%)`;
+        const pct = Math.min(100, (this.totalLeavesAllTime / gen.unlockAt * 100));
+        iconEl.textContent = gen.icon;
+        labelEl.textContent = `Next: ${gen.name} — ${fmt(this.totalLeavesAllTime)} / ${fmt(gen.unlockAt)}`;
+        fillEl.style.width = pct + '%';
+        pctEl.textContent = pct.toFixed(0) + '%';
         return;
       }
     }
     // Find next unpurchased upgrade
     for (const upg of this.upgrades) {
       if (!upg.bought) {
-        const pct = Math.min(100, (this.leaves / upg.cost * 100)).toFixed(0);
-        el.innerHTML = `Next: <strong>${upg.name}</strong><br>${fmt(this.leaves)} / ${fmt(upg.cost)} (${pct}%)`;
+        const pct = Math.min(100, (this.leaves / upg.cost * 100));
+        iconEl.textContent = '⬆️';
+        labelEl.textContent = `Next: ${upg.name} — ${fmt(this.leaves)} / ${fmt(upg.cost)}`;
+        fillEl.style.width = pct + '%';
+        pctEl.textContent = pct.toFixed(0) + '%';
         return;
       }
     }
-    // All done
+    // Prestige
     const gain = this.getPrestigeEssence();
     if (gain > 0) {
-      el.innerHTML = `<strong>Prestige Available!</strong><br>+${gain} Nature Essence`;
+      iconEl.textContent = '✨';
+      labelEl.textContent = `Prestige Available! +${gain} Nature Essence`;
+      fillEl.style.width = '100%';
+      fillEl.style.background = 'linear-gradient(90deg, var(--purple-deep), var(--purple))';
+      pctEl.textContent = '✨';
     } else {
-      el.innerHTML = `Goal: Prestige<br>${fmt(this.totalLeaves)} / ${fmt(1e9)}`;
+      const pct = Math.min(100, (this.totalLeaves / 1e9 * 100));
+      iconEl.textContent = '✨';
+      labelEl.textContent = `Goal: Prestige — ${fmt(this.totalLeaves)} / ${fmt(1e9)}`;
+      fillEl.style.width = pct + '%';
+      fillEl.style.background = 'linear-gradient(90deg, var(--purple-deep), var(--purple))';
+      pctEl.textContent = pct.toFixed(1) + '%';
     }
-  },
-
-  updateBackground() {
-    const scene = document.getElementById('bg-scene');
-    const totalGens = this.generators.reduce((s, g) => s + Math.floor(g.count), 0);
-
-    let bg;
-    if (totalGens >= 200) {
-      bg = 'linear-gradient(180deg, #050a15 0%, #0a1a0a 30%, #0d2b0d 60%, #1a4a1a 100%)';
-    } else if (totalGens >= 100) {
-      bg = 'linear-gradient(180deg, #080e18 0%, #0c1e0c 40%, #153015 100%)';
-    } else if (totalGens >= 50) {
-      bg = 'linear-gradient(180deg, #0a0f14 0%, #0e1a0e 50%, #122512 100%)';
-    } else if (totalGens >= 20) {
-      bg = 'linear-gradient(180deg, #0a0f0a 0%, #0f1a0f 60%, #142014 100%)';
-    } else if (totalGens >= 5) {
-      bg = 'linear-gradient(180deg, #0a0e0a 0%, #0d150d 100%)';
-    } else {
-      bg = 'linear-gradient(180deg, #0a0f0a 0%, #0c0c0a 100%)';
-    }
-    scene.style.background = bg;
   },
 
   // ===== FALLING LEAVES =====
@@ -1519,11 +2524,12 @@ const Game = {
     if (!mainArea) return;
     const leaf = document.createElement('div');
     leaf.className = 'falling-leaf';
-    const leaves = ['🍂', '🍃', '🌿', '☘️'];
+    const leaves = ['🍂', '🍃', '🌿', '☘️', '🍁'];
     leaf.textContent = leaves[Math.floor(Math.random() * leaves.length)];
     leaf.style.left = Math.random() * 100 + '%';
     leaf.style.animationDuration = (6 + Math.random() * 8) + 's';
     leaf.style.fontSize = (0.8 + Math.random() * 0.8) + 'em';
+    leaf.style.setProperty('--sway-bg', (Math.random() * 60 - 30) + 'px');
     mainArea.appendChild(leaf);
     setTimeout(() => leaf.remove(), 15000);
   },
