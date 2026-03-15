@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leaf Life Simulator</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+#gameCanvas { display: block; width: 100vw; height: 100vh; }
+
+/* HUD */
+#hud { position: fixed; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 10; }
+#sugar-display {
+  text-align: center; padding: 12px 0 4px;
+  font-size: 42px; font-weight: 800; color: #fff;
+  text-shadow: 0 0 20px rgba(76,175,80,0.8), 0 2px 4px rgba(0,0,0,0.5);
+  letter-spacing: 2px;
+}
+#sugar-display span { color: #81C784; }
+#per-click { text-align: center; font-size: 14px; color: rgba(255,255,255,0.6); margin-top: -2px; }
+
+#quota-bar-container {
+  width: 320px; margin: 8px auto; background: rgba(0,0,0,0.5);
+  border-radius: 12px; height: 24px; border: 1px solid rgba(255,255,255,0.15);
+  overflow: hidden; position: relative;
+}
+#quota-bar {
+  height: 100%; background: linear-gradient(90deg, #43A047, #66BB6A);
+  border-radius: 12px; transition: width 0.3s ease; width: 0%;
+}
+#quota-text {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: #fff; font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+#info-bar {
+  display: flex; justify-content: center; gap: 20px; padding: 6px 0;
+  font-size: 15px; color: rgba(255,255,255,0.85);
+}
+.info-item { display: flex; align-items: center; gap: 4px; }
+
+/* Click feedback */
+.click-text {
+  position: fixed; pointer-events: none; z-index: 100;
+  font-size: 22px; font-weight: 800; color: #FFEB3B;
+  text-shadow: 0 0 10px rgba(255,235,59,0.7), 0 2px 3px rgba(0,0,0,0.5);
+  animation: floatUp 1s ease-out forwards;
+}
+@keyframes floatUp {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-80px) scale(1.3); }
+}
+
+/* Upgrade Panel */
+#upgrade-panel {
+  position: fixed; bottom: 20px; right: 20px; z-index: 10;
+  display: flex; flex-direction: column; gap: 8px; pointer-events: auto;
+}
+.upgrade-btn {
+  background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.2);
+  color: #fff; padding: 8px 14px; border-radius: 10px; cursor: pointer;
+  font-size: 13px; transition: all 0.2s; pointer-events: auto;
+  backdrop-filter: blur(8px); text-align: left;
+}
+.upgrade-btn:hover { background: rgba(76,175,80,0.4); border-color: #4CAF50; transform: scale(1.03); }
+.upgrade-btn:active { transform: scale(0.97); }
+.upgrade-btn .cost { color: #81C784; font-weight: 700; }
+.upgrade-btn .name { font-weight: 600; }
+.upgrade-btn .desc { font-size: 11px; color: rgba(255,255,255,0.5); }
+.upgrade-btn.disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Click button */
+#click-btn {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+  z-index: 10; pointer-events: auto;
+  width: 120px; height: 120px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #66BB6A, #2E7D32);
+  border: 3px solid rgba(255,255,255,0.3); cursor: pointer;
+  font-size: 28px; color: #fff; font-weight: 800;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  box-shadow: 0 0 30px rgba(76,175,80,0.4), 0 4px 15px rgba(0,0,0,0.3);
+  transition: transform 0.1s, box-shadow 0.1s;
+  display: flex; align-items: center; justify-content: center;
+}
+#click-btn:hover { box-shadow: 0 0 50px rgba(76,175,80,0.6), 0 4px 20px rgba(0,0,0,0.4); }
+#click-btn:active { transform: translateX(-50%) scale(0.92); }
+#click-btn .leaf-icon { font-size: 40px; }
+
+/* Game Over */
+#game-over {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.85); z-index: 50; display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  backdrop-filter: blur(5px);
+}
+#game-over h1 { font-size: 52px; color: #BF360C; margin-bottom: 8px; text-shadow: 0 0 30px rgba(191,54,12,0.5); }
+#game-over h2 { font-size: 22px; color: rgba(255,255,255,0.7); margin-bottom: 30px; font-weight: 400; }
+#game-over .stat { font-size: 18px; color: rgba(255,255,255,0.8); margin: 6px 0; }
+#game-over .stat span { color: #81C784; font-weight: 700; }
+#restart-btn {
+  margin-top: 30px; padding: 14px 40px; font-size: 18px; font-weight: 700;
+  background: linear-gradient(135deg, #43A047, #2E7D32); color: #fff;
+  border: none; border-radius: 12px; cursor: pointer;
+  box-shadow: 0 4px 15px rgba(76,175,80,0.4); transition: transform 0.15s;
+}
+#restart-btn:hover { transform: scale(1.05); }
+
+/* Start screen */
+#start-screen {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.88); z-index: 60;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  backdrop-filter: blur(8px);
+}
+#start-screen h1 { font-size: 56px; color: #4CAF50; margin-bottom: 10px; text-shadow: 0 0 40px rgba(76,175,80,0.5); }
+#start-screen h1 span { font-size: 60px; }
+#start-screen p { color: rgba(255,255,255,0.6); font-size: 16px; max-width: 400px; text-align: center; line-height: 1.5; margin-bottom: 30px; }
+#start-btn {
+  padding: 16px 50px; font-size: 20px; font-weight: 700;
+  background: linear-gradient(135deg, #43A047, #2E7D32); color: #fff;
+  border: none; border-radius: 14px; cursor: pointer;
+  box-shadow: 0 0 40px rgba(76,175,80,0.4); transition: transform 0.15s;
+}
+#start-btn:hover { transform: scale(1.07); }
+
+/* Weather notification */
+#weather-notify {
+  position: fixed; top: 120px; left: 50%; transform: translateX(-50%);
+  z-index: 15; background: rgba(0,0,0,0.7); padding: 8px 20px;
+  border-radius: 20px; color: #fff; font-size: 15px; font-weight: 600;
+  opacity: 0; transition: opacity 0.5s; pointer-events: none;
+  backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.15);
+}
+</style>
+</head>
+<body>
+
+<div id="start-screen">
+  <h1><span>🍃</span> Leaf Life</h1>
+  <p>You are a leaf. Click to photosynthesize. Generate enough sugar each cycle to survive — or wither, fall, and die. How long can you hold on?</p>
+  <button id="start-btn">Sprout</button>
+</div>
+
+<div id="hud">
+  <div id="sugar-display">🍬 <span id="sugar-count">0</span></div>
+  <div id="per-click">+<span id="spc-display">1</span> per click</div>
+  <div id="quota-bar-container">
+    <div id="quota-bar"></div>
+    <div id="quota-text">0 / 20 — 60s</div>
+  </div>
+  <div id="info-bar">
+    <div class="info-item" id="season-display">🌸 Spring</div>
+    <div class="info-item" id="weather-display">☀️ Sunny</div>
+    <div class="info-item" id="cycle-display">🔄 Cycle 1</div>
+  </div>
+</div>
+
+<div id="weather-notify"></div>
+
+<button id="click-btn"><span class="leaf-icon">🍃</span></button>
+
+<div id="upgrade-panel">
+  <button class="upgrade-btn" id="up-cuticle" onclick="buyUpgrade('cuticle')">
+    <div class="name">🧬 Thicker Cuticle</div>
+    <div class="desc">+1 sugar per click</div>
+    <div class="cost">Cost: 30</div>
+  </button>
+  <button class="upgrade-btn" id="up-chloro" onclick="buyUpgrade('chloroplast')">
+    <div class="name">🟢 More Chloroplasts</div>
+    <div class="desc">+1 passive sugar/sec</div>
+    <div class="cost">Cost: 50</div>
+  </button>
+  <button class="upgrade-btn" id="up-roots" onclick="buyUpgrade('roots')">
+    <div class="name">🌱 Deeper Roots</div>
+    <div class="desc">Slower quota increase</div>
+    <div class="cost">Cost: 80</div>
+  </button>
+  <button class="upgrade-btn" id="up-waxy" onclick="buyUpgrade('waxy')">
+    <div class="name">💧 Waxy Coating</div>
+    <div class="desc">Weather resistance</div>
+    <div class="cost">Cost: 60</div>
+  </button>
+</div>
+
+<div id="game-over">
+  <h1>🍂 Fallen</h1>
+  <h2>Your leaf has withered and fallen...</h2>
+  <div class="stat">Cycles Survived: <span id="go-cycles">0</span></div>
+  <div class="stat">Total Sugar: <span id="go-sugar">0</span></div>
+  <div class="stat">Season: <span id="go-season">Spring</span></div>
+  <div class="stat">Time Alive: <span id="go-time">0:00</span></div>
+  <button id="restart-btn" onclick="restartGame()">Try Again</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ==================== GAME STATE ====================
+const G = {
+  sugar: 0, totalSugar: 0, quota: 20, quotaBase: 20, quotaGrowth: 1.35,
+  cycleTime: 60, timer: 60, cycle: 1, running: false, dead: false,
+  sugarPerClick: 1, passiveRate: 0, rootsLevel: 0, waxyLevel: 0,
+  cuticleLevel: 0, chloroLevel: 0,
+  season: 'spring', seasonIndex: 0, seasonTimer: 0,
+  weather: 'sunny', weatherTimer: 0, weatherDuration: 0,
+  totalTime: 0, leafScale: 1, leafHealth: 1,
+  deathPhase: false, deathTime: 0,
+};
+
+const SEASONS = [
+  { name: 'Spring', icon: '🌸', mult: 1.0, sky: 0x87CEEB, ground: 0x4CAF50, sun: 0xFFF9C4, fogColor: 0x87CEEB },
+  { name: 'Summer', icon: '☀️', mult: 1.2, sky: 0x42A5F5, ground: 0x388E3C, sun: 0xFFEB3B, fogColor: 0x42A5F5 },
+  { name: 'Autumn', icon: '🍂', mult: 0.75, sky: 0xFFCC80, ground: 0x8D6E63, sun: 0xFFB74D, fogColor: 0xFFCC80 },
+  { name: 'Winter', icon: '❄️', mult: 0.5, sky: 0x90A4AE, ground: 0xCFD8DC, sun: 0xB0BEC5, fogColor: 0x90A4AE },
+];
+
+const WEATHERS = [
+  { name: 'Sunny', icon: '☀️', mult: 1.0 },
+  { name: 'Rain', icon: '🌧️', mult: 1.5 },
+  { name: 'Cold Snap', icon: '❄️', mult: 0.5 },
+  { name: 'Heat Wave', icon: '🔥', mult: 0.5 },
+  { name: 'Partly Cloudy', icon: '🌤️', mult: 0.8 },
+];
+
+const UPGRADE_COSTS = {
+  cuticle: () => Math.floor(30 * Math.pow(1.5, G.cuticleLevel)),
+  chloroplast: () => Math.floor(50 * Math.pow(1.6, G.chloroLevel)),
+  roots: () => Math.floor(80 * Math.pow(1.7, G.rootsLevel)),
+  waxy: () => Math.floor(60 * Math.pow(1.5, G.waxyLevel)),
+};
+
+// ==================== THREE.JS SETUP ====================
+let scene, camera, renderer, clock;
+let tree, playerLeaf, ground, sun, sunLight;
+let bgLeaves = [], snowParticles = [], rainParticles = [];
+let leafGlow;
+
+function initThree() {
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x87CEEB, 0.015);
+
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
+  camera.position.set(0, 5, 12);
+  camera.lookAt(0, 4, 0);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
+  document.body.prepend(renderer.domElement);
+  renderer.domElement.id = 'gameCanvas';
+
+  clock = new THREE.Clock();
+
+  // Lights
+  const ambient = new THREE.AmbientLight(0x404040, 0.6);
+  scene.add(ambient);
+
+  sunLight = new THREE.DirectionalLight(0xfff5e0, 1.2);
+  sunLight.position.set(10, 20, 10);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.set(1024, 1024);
+  sunLight.shadow.camera.near = 0.5;
+  sunLight.shadow.camera.far = 50;
+  sunLight.shadow.camera.left = -15;
+  sunLight.shadow.camera.right = 15;
+  sunLight.shadow.camera.top = 15;
+  sunLight.shadow.camera.bottom = -15;
+  scene.add(sunLight);
+
+  const hemi = new THREE.HemisphereLight(0x87CEEB, 0x4CAF50, 0.4);
+  scene.add(hemi);
+
+  // Ground
+  const groundGeo = new THREE.PlaneGeometry(80, 80);
+  const groundMat = new THREE.MeshLambertMaterial({ color: 0x4CAF50 });
+  ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  // Sun sphere
+  const sunGeo = new THREE.SphereGeometry(1.5, 16, 16);
+  const sunMat = new THREE.MeshBasicMaterial({ color: 0xFFF9C4 });
+  sun = new THREE.Mesh(sunGeo, sunMat);
+  sun.position.set(15, 18, -10);
+  scene.add(sun);
+
+  // Build tree
+  buildTree();
+
+  // Build player leaf
+  buildPlayerLeaf();
+
+  // Background trees
+  for (let i = 0; i < 6; i++) {
+    const bgTree = createSimpleTree();
+    const angle = (i / 6) * Math.PI * 2;
+    const dist = 15 + Math.random() * 15;
+    bgTree.position.set(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
+    bgTree.scale.setScalar(0.5 + Math.random() * 0.5);
+    scene.add(bgTree);
+  }
+
+  // Particle systems
+  createSnowSystem();
+  createRainSystem();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+}
+
+function createSimpleTree() {
+  const group = new THREE.Group();
+  // Trunk
+  const trunkGeo = new THREE.CylinderGeometry(0.2, 0.35, 4, 6);
+  const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
+  const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+  trunk.position.y = 2;
+  group.add(trunk);
+  // Canopy
+  const canopyGeo = new THREE.SphereGeometry(2, 8, 8);
+  const canopyMat = new THREE.MeshLambertMaterial({ color: 0x2E7D32 });
+  const canopy = new THREE.Mesh(canopyGeo, canopyMat);
+  canopy.position.y = 5;
+  group.add(canopy);
+  return group;
+}
+
+function buildTree() {
+  tree = new THREE.Group();
+
+  // Main trunk
+  const trunkGeo = new THREE.CylinderGeometry(0.3, 0.6, 7, 8);
+  const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
+  const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+  trunk.position.y = 3.5;
+  trunk.castShadow = true;
+  tree.add(trunk);
+
+  // Branches
+  const branchMat = new THREE.MeshLambertMaterial({ color: 0x6D4C41 });
+  const branches = [
+    { pos: [0, 5.5, 0], rot: [0, 0, 0.5], len: 3 },
+    { pos: [0, 6.2, 0], rot: [0, 1.2, -0.4], len: 2.5 },
+    { pos: [0, 4.8, 0], rot: [0, 2.5, 0.6], len: 2.8 },
+    { pos: [0, 5.0, 0], rot: [0, -1, -0.5], len: 2.2 },
+    { pos: [0, 6.5, 0], rot: [0, 0.5, 0.3], len: 2 },
+    { pos: [0, 5.8, 0], rot: [0, 3.5, -0.35], len: 2.5 },
+  ];
+  branches.forEach(b => {
+    const geo = new THREE.CylinderGeometry(0.06, 0.14, b.len, 5);
+    geo.translate(0, b.len / 2, 0);
+    const mesh = new THREE.Mesh(geo, branchMat);
+    mesh.position.set(...b.pos);
+    mesh.rotation.set(b.rot[0], b.rot[1], b.rot[2]);
+    mesh.castShadow = true;
+    tree.add(mesh);
+  });
+
+  // Canopy (leaves mass)
+  tree.canopyMeshes = [];
+  const canopyPositions = [
+    [0, 7.5, 0, 2.2], [-1.5, 6.8, 1, 1.5], [1.5, 7, -0.5, 1.5],
+    [0, 8, 1, 1.2], [-1, 7.2, -1.2, 1.3], [1.2, 6.5, 0.8, 1.4],
+  ];
+  canopyPositions.forEach(p => {
+    const geo = new THREE.SphereGeometry(p[3], 8, 8);
+    const mat = new THREE.MeshLambertMaterial({ color: 0x388E3C, transparent: true, opacity: 0.9 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(p[0], p[1], p[2]);
+    mesh.castShadow = true;
+    tree.add(mesh);
+    tree.canopyMeshes.push(mesh);
+  });
+
+  // Flowers (spring)
+  tree.flowers = [];
+  for (let i = 0; i < 15; i++) {
+    const fGeo = new THREE.SphereGeometry(0.12, 6, 6);
+    const fMat = new THREE.MeshBasicMaterial({
+      color: [0xF48FB1, 0xFFFFFF, 0xFFAB91, 0xCE93D8][Math.floor(Math.random() * 4)]
+    });
+    const f = new THREE.Mesh(fGeo, fMat);
+    const angle = Math.random() * Math.PI * 2;
+    const r = 1 + Math.random() * 2;
+    f.position.set(Math.cos(angle) * r, 6.5 + Math.random() * 2, Math.sin(angle) * r);
+    tree.add(f);
+    tree.flowers.push(f);
+  }
+
+  scene.add(tree);
+}
+
+function buildPlayerLeaf() {
+  const group = new THREE.Group();
+
+  // Leaf shape using a custom geometry
+  const shape = new THREE.Shape();
+  shape.moveTo(0, -0.6);
+  shape.bezierCurveTo(0.4, -0.3, 0.5, 0.2, 0.3, 0.5);
+  shape.bezierCurveTo(0.15, 0.7, 0, 0.8, 0, 0.8);
+  shape.bezierCurveTo(0, 0.8, -0.15, 0.7, -0.3, 0.5);
+  shape.bezierCurveTo(-0.5, 0.2, -0.4, -0.3, 0, -0.6);
+
+  const leafGeo = new THREE.ShapeGeometry(shape, 12);
+  const leafMat = new THREE.MeshLambertMaterial({
+    color: 0x4CAF50, side: THREE.DoubleSide, transparent: true, opacity: 0.95
+  });
+  const leafMesh = new THREE.Mesh(leafGeo, leafMat);
+  group.add(leafMesh);
+
+  // Veins (stem)
+  const stemGeo = new THREE.CylinderGeometry(0.015, 0.02, 0.9, 4);
+  const stemMat = new THREE.MeshLambertMaterial({ color: 0x2E7D32 });
+  const stem = new THREE.Mesh(stemGeo, stemMat);
+  stem.position.y = 0.05;
+  group.add(stem);
+
+  // Side veins
+  for (let i = 0; i < 4; i++) {
+    const vGeo = new THREE.CylinderGeometry(0.008, 0.012, 0.3, 3);
+    const v = new THREE.Mesh(vGeo, stemMat.clone());
+    const y = -0.1 + i * 0.2;
+    const side = i % 2 === 0 ? 1 : -1;
+    v.position.set(side * 0.1, y, 0.01);
+    v.rotation.z = side * 0.7;
+    group.add(v);
+  }
+
+  // Glow ring
+  const glowGeo = new THREE.RingGeometry(0.8, 1.1, 32);
+  const glowMat = new THREE.MeshBasicMaterial({ color: 0x76FF03, transparent: true, opacity: 0, side: THREE.DoubleSide });
+  leafGlow = new THREE.Mesh(glowGeo, glowMat);
+  leafGlow.position.z = -0.01;
+  group.add(leafGlow);
+
+  group.position.set(2.0, 6.2, 1.5);
+  group.userData = { leafMesh, leafMat, stemMat, basePos: group.position.clone() };
+
+  playerLeaf = group;
+  scene.add(playerLeaf);
+}
+
+function createSnowSystem() {
+  const geo = new THREE.BufferGeometry();
+  const count = 500;
+  const pos = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    pos[i * 3] = (Math.random() - 0.5) * 40;
+    pos[i * 3 + 1] = Math.random() * 25;
+    pos[i * 3 + 2] = (Math.random() - 0.5) * 40;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({ color: 0xFFFFFF, size: 0.15, transparent: true, opacity: 0 });
+  const points = new THREE.Points(geo, mat);
+  scene.add(points);
+  snowParticles = { mesh: points, positions: pos, count };
+}
+
+function createRainSystem() {
+  const geo = new THREE.BufferGeometry();
+  const count = 400;
+  const pos = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    pos[i * 3] = (Math.random() - 0.5) * 30;
+    pos[i * 3 + 1] = Math.random() * 20;
+    pos[i * 3 + 2] = (Math.random() - 0.5) * 30;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({ color: 0x90CAF9, size: 0.08, transparent: true, opacity: 0 });
+  const points = new THREE.Points(geo, mat);
+  scene.add(points);
+  rainParticles = { mesh: points, positions: pos, count };
+}
+
+// ==================== BG FALLING LEAVES ====================
+function spawnBgLeaf() {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, -0.3);
+  shape.bezierCurveTo(0.2, -0.15, 0.25, 0.1, 0.15, 0.25);
+  shape.bezierCurveTo(0, 0.4, 0, 0.4, 0, 0.4);
+  shape.bezierCurveTo(0, 0.4, 0, 0.4, -0.15, 0.25);
+  shape.bezierCurveTo(-0.25, 0.1, -0.2, -0.15, 0, -0.3);
+  const geo = new THREE.ShapeGeometry(shape);
+  const colors = [0xF57F17, 0xFF8F00, 0xE65100, 0xBF360C, 0xFFA000];
+  const mat = new THREE.MeshBasicMaterial({
+    color: colors[Math.floor(Math.random() * colors.length)],
+    side: THREE.DoubleSide, transparent: true, opacity: 0.8
+  });
+  const leaf = new THREE.Mesh(geo, mat);
+  leaf.position.set((Math.random() - 0.5) * 8, 6 + Math.random() * 4, (Math.random() - 0.5) * 6);
+  leaf.userData = {
+    vel: new THREE.Vector3((Math.random() - 0.5) * 0.5, -0.5 - Math.random() * 0.5, (Math.random() - 0.5) * 0.3),
+    rotSpeed: new THREE.Vector3(Math.random() * 2, Math.random() * 2, Math.random() * 2),
+    life: 0
+  };
+  leaf.scale.setScalar(0.3 + Math.random() * 0.4);
+  scene.add(leaf);
+  bgLeaves.push(leaf);
+}
+
+// ==================== CLICK HANDLING ====================
+let glowIntensity = 0;
+
+function doClick(e) {
+  if (!G.running || G.dead) return;
+
+  const seasonMult = SEASONS[G.seasonIndex].mult;
+  const weatherMult = WEATHERS.find(w => w.name === G.weather)?.mult || 1;
+  const waxyReduction = G.waxyLevel * 0.1;
+  const effectiveWeatherMult = weatherMult < 1 ? Math.min(1, weatherMult + waxyReduction) : weatherMult;
+  const totalMult = seasonMult * effectiveWeatherMult;
+  const gained = Math.max(1, Math.round(G.sugarPerClick * totalMult));
+
+  G.sugar += gained;
+  G.totalSugar += gained;
+
+  // Visual feedback
+  glowIntensity = 1;
+
+  // Floating text
+  const div = document.createElement('div');
+  div.className = 'click-text';
+  div.textContent = `+${gained}`;
+  const x = (e?.clientX || window.innerWidth / 2) + (Math.random() - 0.5) * 40;
+  const y = (e?.clientY || window.innerHeight * 0.7) - 20;
+  div.style.left = x + 'px';
+  div.style.top = y + 'px';
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 1000);
+
+  updateHUD();
+}
+
+document.getElementById('click-btn').addEventListener('click', doClick);
+document.getElementById('click-btn').addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  doClick(e.touches[0]);
+});
+
+// Also allow clicking the 3D leaf
+function onCanvasClick(e) {
+  if (!G.running || G.dead) return;
+  const mouse = new THREE.Vector2(
+    (e.clientX / window.innerWidth) * 2 - 1,
+    -(e.clientY / window.innerHeight) * 2 + 1
+  );
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObject(playerLeaf, true);
+  if (intersects.length > 0) doClick(e);
+}
+
+// ==================== UPGRADES ====================
+function buyUpgrade(type) {
+  if (!G.running || G.dead) return;
+  const cost = UPGRADE_COSTS[type]();
+  if (G.sugar < cost) return;
+  G.sugar -= cost;
+
+  switch(type) {
+    case 'cuticle':
+      G.cuticleLevel++;
+      G.sugarPerClick++;
+      break;
+    case 'chloroplast':
+      G.chloroLevel++;
+      G.passiveRate++;
+      break;
+    case 'roots':
+      G.rootsLevel++;
+      break;
+    case 'waxy':
+      G.waxyLevel++;
+      break;
+  }
+
+  updateUpgradeButtons();
+  updateHUD();
+}
+
+function updateUpgradeButtons() {
+  const items = [
+    { id: 'up-cuticle', type: 'cuticle', name: '🧬 Thicker Cuticle', desc: `+1 sugar/click (Lv ${G.cuticleLevel})` },
+    { id: 'up-chloro', type: 'chloroplast', name: '🟢 More Chloroplasts', desc: `+1 passive/sec (Lv ${G.chloroLevel})` },
+    { id: 'up-roots', type: 'roots', name: '🌱 Deeper Roots', desc: `Slower quota (Lv ${G.rootsLevel})` },
+    { id: 'up-waxy', type: 'waxy', name: '💧 Waxy Coating', desc: `Weather resist (Lv ${G.waxyLevel})` },
+  ];
+  items.forEach(item => {
+    const el = document.getElementById(item.id);
+    const cost = UPGRADE_COSTS[item.type]();
+    el.querySelector('.name').textContent = item.name;
+    el.querySelector('.desc').textContent = item.desc;
+    el.querySelector('.cost').textContent = `Cost: ${cost}`;
+    el.classList.toggle('disabled', G.sugar < cost);
+  });
+}
+
+// ==================== HUD ====================
+function updateHUD() {
+  document.getElementById('sugar-count').textContent = Math.floor(G.sugar);
+  document.getElementById('spc-display').textContent = G.sugarPerClick;
+
+  const progress = Math.min(100, (G.sugar / G.quota) * 100);
+  document.getElementById('quota-bar').style.width = progress + '%';
+  const timeLeft = Math.ceil(G.timer);
+  document.getElementById('quota-text').textContent = `${Math.floor(G.sugar)} / ${G.quota} — ${timeLeft}s`;
+
+  // Bar color based on progress
+  const bar = document.getElementById('quota-bar');
+  if (progress >= 100) bar.style.background = 'linear-gradient(90deg, #43A047, #76FF03)';
+  else if (progress >= 50) bar.style.background = 'linear-gradient(90deg, #43A047, #66BB6A)';
+  else if (progress >= 25) bar.style.background = 'linear-gradient(90deg, #F9A825, #FDD835)';
+  else bar.style.background = 'linear-gradient(90deg, #E53935, #FF5252)';
+
+  const s = SEASONS[G.seasonIndex];
+  document.getElementById('season-display').textContent = `${s.icon} ${s.name}`;
+
+  const w = WEATHERS.find(ww => ww.name === G.weather) || WEATHERS[0];
+  document.getElementById('weather-display').textContent = `${w.icon} ${w.name}`;
+
+  document.getElementById('cycle-display').textContent = `🔄 Cycle ${G.cycle}`;
+
+  updateUpgradeButtons();
+}
+
+// ==================== SEASONS & WEATHER ====================
+function updateSeason(dt) {
+  G.seasonTimer += dt;
+  if (G.seasonTimer >= 60) { // 1 min per season
+    G.seasonTimer -= 60;
+    G.seasonIndex = (G.seasonIndex + 1) % 4;
+    G.season = SEASONS[G.seasonIndex].name.toLowerCase();
+  }
+
+  // Transition scene colors
+  const s = SEASONS[G.seasonIndex];
+  const nextS = SEASONS[(G.seasonIndex + 1) % 4];
+  const t = G.seasonTimer / 60;
+
+  const skyColor = new THREE.Color(s.sky).lerp(new THREE.Color(nextS.sky), t * 0.3);
+  scene.fog.color.copy(skyColor);
+  scene.background = skyColor;
+  renderer.setClearColor(skyColor);
+
+  const groundColor = new THREE.Color(s.ground).lerp(new THREE.Color(nextS.ground), t * 0.3);
+  ground.material.color.copy(groundColor);
+
+  sun.material.color.set(s.sun);
+
+  // Flowers visibility
+  const showFlowers = G.seasonIndex === 0;
+  tree.flowers.forEach(f => { f.visible = showFlowers; });
+
+  // Canopy opacity (less in winter)
+  const canopyOpacity = G.seasonIndex === 3 ? 0.3 : (G.seasonIndex === 2 ? 0.7 : 0.9);
+  tree.canopyMeshes.forEach(m => { m.material.opacity += (canopyOpacity - m.material.opacity) * dt; });
+
+  // Canopy color
+  const canopyColors = [0x388E3C, 0x2E7D32, 0x8D6E63, 0x78909C];
+  tree.canopyMeshes.forEach(m => {
+    m.material.color.lerp(new THREE.Color(canopyColors[G.seasonIndex]), dt * 0.5);
+  });
+
+  // Leaf color based on season
+  if (playerLeaf && !G.dead) {
+    const leafColors = [0x4CAF50, 0x388E3C, 0xFF8F00, 0x9E9E9E];
+    const targetColor = new THREE.Color(leafColors[G.seasonIndex]);
+    playerLeaf.userData.leafMat.color.lerp(targetColor, dt * 0.3);
+  }
+
+  // Spawn bg leaves in autumn
+  if (G.seasonIndex === 2 && Math.random() < dt * 0.5) {
+    spawnBgLeaf();
+  }
+
+  // Snow
+  const showSnow = G.seasonIndex === 3 || G.weather === 'Cold Snap';
+  snowParticles.mesh.material.opacity += ((showSnow ? 0.7 : 0) - snowParticles.mesh.material.opacity) * dt * 2;
+
+  // Rain
+  const showRain = G.weather === 'Rain';
+  rainParticles.mesh.material.opacity += ((showRain ? 0.6 : 0) - rainParticles.mesh.material.opacity) * dt * 2;
+}
+
+function updateWeather(dt) {
+  G.weatherTimer -= dt;
+  if (G.weatherTimer <= 0) {
+    // New weather event or clear
+    if (G.weather === 'Sunny' || Math.random() < 0.3) {
+      const options = WEATHERS.filter(w => w.name !== 'Sunny');
+      const chosen = options[Math.floor(Math.random() * options.length)];
+      G.weather = chosen.name;
+      G.weatherDuration = 15 + Math.random() * 15;
+      G.weatherTimer = G.weatherDuration;
+
+      // Show notification
+      const notify = document.getElementById('weather-notify');
+      notify.textContent = `${chosen.icon} ${chosen.name}! (${chosen.mult > 1 ? '+' : ''}${Math.round((chosen.mult - 1) * 100)}% sugar)`;
+      notify.style.opacity = 1;
+      setTimeout(() => { notify.style.opacity = 0; }, 3000);
+    } else {
+      G.weather = 'Sunny';
+      G.weatherTimer = 20 + Math.random() * 20;
+    }
+    updateHUD();
+  }
+}
+
+// ==================== PARTICLES UPDATE ====================
+function updateParticles(dt) {
+  // Snow
+  if (snowParticles.mesh.material.opacity > 0.01) {
+    const pos = snowParticles.positions;
+    for (let i = 0; i < snowParticles.count; i++) {
+      pos[i * 3 + 1] -= dt * (0.8 + Math.sin(i) * 0.3);
+      pos[i * 3] += Math.sin(Date.now() * 0.001 + i) * dt * 0.3;
+      if (pos[i * 3 + 1] < 0) {
+        pos[i * 3 + 1] = 20 + Math.random() * 5;
+        pos[i * 3] = (Math.random() - 0.5) * 40;
+      }
+    }
+    snowParticles.mesh.geometry.attributes.position.needsUpdate = true;
+  }
+
+  // Rain
+  if (rainParticles.mesh.material.opacity > 0.01) {
+    const pos = rainParticles.positions;
+    for (let i = 0; i < rainParticles.count; i++) {
+      pos[i * 3 + 1] -= dt * 8;
+      if (pos[i * 3 + 1] < 0) {
+        pos[i * 3 + 1] = 15 + Math.random() * 5;
+        pos[i * 3] = (Math.random() - 0.5) * 30;
+        pos[i * 3 + 2] = (Math.random() - 0.5) * 30;
+      }
+    }
+    rainParticles.mesh.geometry.attributes.position.needsUpdate = true;
+  }
+
+  // BG leaves
+  for (let i = bgLeaves.length - 1; i >= 0; i--) {
+    const leaf = bgLeaves[i];
+    const ud = leaf.userData;
+    leaf.position.add(ud.vel.clone().multiplyScalar(dt));
+    leaf.rotation.x += ud.rotSpeed.x * dt;
+    leaf.rotation.y += ud.rotSpeed.y * dt;
+    leaf.rotation.z += ud.rotSpeed.z * dt;
+    ud.vel.x += (Math.random() - 0.5) * dt * 2;
+    ud.life += dt;
+    if (leaf.position.y < 0.1 || ud.life > 8) {
+      scene.remove(leaf);
+      bgLeaves.splice(i, 1);
+    }
+  }
+}
+
+// ==================== PLAYER LEAF ANIMATION ====================
+function updatePlayerLeaf(dt) {
+  if (!playerLeaf || G.dead) return;
+
+  // Glow fade
+  glowIntensity = Math.max(0, glowIntensity - dt * 3);
+  leafGlow.material.opacity = glowIntensity * 0.5;
+
+  // Scale based on cycles
+  const targetScale = 1 + (G.cycle - 1) * 0.08;
+  G.leafScale += (targetScale - G.leafScale) * dt;
+  playerLeaf.scale.setScalar(G.leafScale);
+
+  // Gentle sway
+  const time = Date.now() * 0.001;
+  playerLeaf.rotation.z = Math.sin(time * 0.8) * 0.05;
+  playerLeaf.rotation.x = Math.sin(time * 0.5) * 0.03;
+
+  // Pulse on click
+  if (glowIntensity > 0.3) {
+    const pulse = 1 + glowIntensity * 0.1;
+    playerLeaf.scale.multiplyScalar(pulse);
+  }
+
+  // Weather effects on leaf
+  if (G.weather === 'Heat Wave') {
+    playerLeaf.rotation.z += Math.sin(time * 3) * 0.03;
+    playerLeaf.userData.leafMat.color.lerp(new THREE.Color(0x8D6E63), dt * 0.2);
+  }
+  if (G.weather === 'Cold Snap') {
+    playerLeaf.userData.leafMat.color.lerp(new THREE.Color(0xB0BEC5), dt * 0.2);
+  }
+
+  // Health visualization (warning when low on sugar near deadline)
+  const quotaProgress = G.sugar / G.quota;
+  const timeProgress = G.timer / G.cycleTime;
+  if (quotaProgress < timeProgress * 0.5 && G.timer < 30) {
+    // Leaf getting stressed
+    playerLeaf.userData.leafMat.color.lerp(new THREE.Color(0xFFA000), dt * 0.5);
+  }
+}
+
+// ==================== DEATH SEQUENCE ====================
+function startDeath() {
+  G.dead = true;
+  G.deathPhase = true;
+  G.deathTime = 0;
+  playerLeaf.userData.velocity = new THREE.Vector3(
+    (Math.random() - 0.5) * 2, 0.5, (Math.random() - 0.5) * 1
+  );
+  playerLeaf.userData.angularVel = new THREE.Vector3(
+    (Math.random() - 0.5) * 4,
+    (Math.random() - 0.5) * 3,
+    (Math.random() - 0.5) * 5
+  );
+
+  document.getElementById('click-btn').style.display = 'none';
+  document.getElementById('upgrade-panel').style.display = 'none';
+}
+
+function updateDeath(dt) {
+  if (!G.deathPhase) return;
+  G.deathTime += dt;
+
+  // Turn brown
+  playerLeaf.userData.leafMat.color.lerp(new THREE.Color(0x5D4037), dt * 2);
+  playerLeaf.userData.leafMat.opacity = Math.max(0.6, 1 - G.deathTime * 0.1);
+
+  // Physics
+  const vel = playerLeaf.userData.velocity;
+  const angVel = playerLeaf.userData.angularVel;
+  vel.y -= 3 * dt; // gravity
+  vel.x += (Math.random() - 0.5) * dt * 2; // wind
+  vel.multiplyScalar(0.995); // drag
+
+  playerLeaf.position.add(vel.clone().multiplyScalar(dt));
+  playerLeaf.rotation.x += angVel.x * dt;
+  playerLeaf.rotation.y += angVel.y * dt;
+  playerLeaf.rotation.z += angVel.z * dt;
+
+  // Slow rotation as it settles
+  angVel.multiplyScalar(0.98);
+
+  // Hit ground
+  if (playerLeaf.position.y <= 0.15) {
+    playerLeaf.position.y = 0.15;
+    vel.y = 0;
+    vel.x *= 0.5;
+    vel.z *= 0.5;
+    angVel.multiplyScalar(0.9);
+  }
+
+  // Camera follows
+  camera.lookAt(playerLeaf.position);
+
+  // Show game over after settling
+  if (G.deathTime > 4) {
+    showGameOver();
+  }
+}
+
+function showGameOver() {
+  G.deathPhase = false;
+  G.running = false;
+  const go = document.getElementById('game-over');
+  go.style.display = 'flex';
+  document.getElementById('go-cycles').textContent = G.cycle - 1;
+  document.getElementById('go-sugar').textContent = G.totalSugar;
+  document.getElementById('go-season').textContent = SEASONS[G.seasonIndex].icon + ' ' + SEASONS[G.seasonIndex].name;
+
+  const mins = Math.floor(G.totalTime / 60);
+  const secs = Math.floor(G.totalTime % 60);
+  document.getElementById('go-time').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function restartGame() {
+  // Reset state
+  Object.assign(G, {
+    sugar: 0, totalSugar: 0, quota: 20, quotaBase: 20,
+    cycleTime: 60, timer: 60, cycle: 1, running: true, dead: false,
+    sugarPerClick: 1, passiveRate: 0, rootsLevel: 0, waxyLevel: 0,
+    cuticleLevel: 0, chloroLevel: 0,
+    season: 'spring', seasonIndex: 0, seasonTimer: 0,
+    weather: 'Sunny', weatherTimer: 10, weatherDuration: 0,
+    totalTime: 0, leafScale: 1, leafHealth: 1,
+    deathPhase: false, deathTime: 0,
+  });
+
+  // Reset leaf
+  scene.remove(playerLeaf);
+  buildPlayerLeaf();
+
+  // Reset camera
+  camera.position.set(0, 5, 12);
+  camera.lookAt(0, 4, 0);
+
+  document.getElementById('game-over').style.display = 'none';
+  document.getElementById('click-btn').style.display = 'flex';
+  document.getElementById('upgrade-panel').style.display = 'flex';
+  updateHUD();
+}
+
+// ==================== GAME LOOP ====================
+function gameLoop() {
+  requestAnimationFrame(gameLoop);
+  const dt = Math.min(clock.getDelta(), 0.1);
+
+  if (G.running && !G.dead) {
+    G.totalTime += dt;
+
+    // Timer countdown
+    G.timer -= dt;
+    if (G.timer <= 0) {
+      // Check quota
+      if (G.sugar >= G.quota) {
+        G.sugar -= G.quota;
+        G.cycle++;
+        const rootsReduction = 1 - G.rootsLevel * 0.05;
+        G.quota = Math.ceil(G.quotaBase * Math.pow(G.quotaGrowth, G.cycle - 1) * Math.max(0.5, rootsReduction));
+        G.timer = G.cycleTime;
+      } else {
+        startDeath();
+      }
+    }
+
+    // Passive sugar
+    if (G.passiveRate > 0) {
+      const seasonMult = SEASONS[G.seasonIndex].mult;
+      const weatherMult = WEATHERS.find(w => w.name === G.weather)?.mult || 1;
+      const waxyReduction = G.waxyLevel * 0.1;
+      const effectiveWeatherMult = weatherMult < 1 ? Math.min(1, weatherMult + waxyReduction) : weatherMult;
+      const gained = G.passiveRate * seasonMult * effectiveWeatherMult * dt;
+      G.sugar += gained;
+      G.totalSugar += gained;
+    }
+
+    updateSeason(dt);
+    updateWeather(dt);
+    updatePlayerLeaf(dt);
+    updateHUD();
+  }
+
+  if (G.deathPhase) {
+    updateDeath(dt);
+  }
+
+  updateParticles(dt);
+
+  // Sun orbit
+  const t = Date.now() * 0.0001;
+  sun.position.x = Math.cos(t) * 20;
+  sun.position.y = 12 + Math.sin(t) * 6;
+  sunLight.position.copy(sun.position);
+
+  // Gentle camera sway
+  if (!G.deathPhase) {
+    camera.position.x = Math.sin(Date.now() * 0.0002) * 0.3;
+    camera.position.y = 5 + Math.sin(Date.now() * 0.0003) * 0.15;
+    camera.lookAt(0, 4.5, 0);
+  }
+
+  renderer.render(scene, camera);
+}
+
+// ==================== INIT ====================
+initThree();
+
+// Canvas click handler
+renderer.domElement.addEventListener('click', onCanvasClick);
+
+document.getElementById('start-btn').addEventListener('click', () => {
+  document.getElementById('start-screen').style.display = 'none';
+  G.running = true;
+  G.weatherTimer = 15 + Math.random() * 10;
+  updateHUD();
+});
+
+// Start render loop (but game waits for start click)
+scene.background = new THREE.Color(0x87CEEB);
+gameLoop();
+</script>
+</body>
+</html>
