@@ -911,6 +911,100 @@ html, body {
   margin-top: 12px;
 }
 
+/* ===== DESKTOP 3-COLUMN LAYOUT ===== */
+@media (min-width: 768px) {
+  #main-area {
+    display: flex;
+    flex-direction: row;
+  }
+
+  /* Left panel: generators */
+  #main-area::before {
+    display: none;
+  }
+
+  #panel-generators {
+    display: block !important;
+    width: 300px;
+    min-width: 260px;
+    max-width: 340px;
+    flex-shrink: 0;
+    border-right: 1px solid rgba(93, 64, 55, 0.4);
+    padding-bottom: 12px;
+    z-index: 10;
+    background: rgba(26, 18, 11, 0.6);
+  }
+
+  #panel-click {
+    display: flex !important;
+    flex: 1;
+    min-width: 0;
+  }
+
+  #panel-upgrades {
+    display: block !important;
+    width: 300px;
+    min-width: 260px;
+    max-width: 340px;
+    flex-shrink: 0;
+    border-left: 1px solid rgba(93, 64, 55, 0.4);
+    padding-bottom: 12px;
+    z-index: 10;
+    background: rgba(26, 18, 11, 0.6);
+  }
+
+  /* Prestige and stats overlay the center */
+  #panel-prestige,
+  #panel-stats {
+    position: absolute;
+    top: 0; left: 300px; right: 300px; bottom: 0;
+    z-index: 20;
+    background: rgba(26, 18, 11, 0.95);
+    backdrop-filter: blur(4px);
+  }
+
+  #panel-prestige:not(.active),
+  #panel-stats:not(.active) {
+    display: none !important;
+  }
+
+  /* Hide mobile bottom nav on desktop, show minimal nav */
+  #bottom-nav {
+    display: none;
+  }
+
+  /* Desktop nav bar (replaces bottom nav) */
+  #desktop-nav {
+    display: flex !important;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 16px;
+    background: linear-gradient(180deg, rgba(44, 30, 18, 0.95), rgba(30, 20, 10, 0.95));
+    border-top: 1px solid var(--brown-1);
+    flex-shrink: 0;
+  }
+
+  #desktop-nav .nav-btn {
+    flex: 0;
+    min-width: 100px;
+    min-height: 40px;
+    font-size: 0.78em;
+    border-radius: 8px;
+  }
+
+  /* Hide gen/upgrade tabs on desktop since they're always visible */
+  #desktop-nav .nav-btn[data-panel="generators"],
+  #desktop-nav .nav-btn[data-panel="upgrades"],
+  #desktop-nav .nav-btn[data-panel="click"] {
+    display: none;
+  }
+}
+
+/* Hide desktop nav on mobile */
+#desktop-nav {
+  display: none;
+}
+
 /* ===== SCROLLBAR ===== */
 .panel::-webkit-scrollbar { width: 4px; }
 .panel::-webkit-scrollbar-track { background: transparent; }
@@ -1184,6 +1278,16 @@ html, body {
       <div class="stats-section-title">Danger Zone</div>
       <button class="danger-btn" onclick="Game.hardReset()">🗑️ Hard Reset (Delete Everything)</button>
     </div>
+  </div>
+
+  <!-- DESKTOP NAV -->
+  <div id="desktop-nav">
+    <button class="nav-btn" onclick="Game.switchPanel('prestige')" data-panel="prestige">
+      <span class="nav-icon">✨</span>Prestige
+    </button>
+    <button class="nav-btn" onclick="Game.switchPanel('stats')" data-panel="stats">
+      <span class="nav-icon">📊</span>Stats
+    </button>
   </div>
 
   <!-- BOTTOM NAV -->
@@ -2259,11 +2363,27 @@ const Game = {
   // ===== PANEL SWITCHING =====
   switchPanel(name) {
     this.activePanel = name;
-    document.querySelectorAll('.panel, #panel-click').forEach(p => p.classList.remove('active'));
-    document.getElementById('panel-' + name).classList.add('active');
+    const isDesktop = window.innerWidth >= 768;
+
+    if (isDesktop) {
+      // On desktop: generators, click, upgrades are always visible
+      // prestige and stats overlay the center
+      document.getElementById('panel-prestige').classList.remove('active');
+      document.getElementById('panel-stats').classList.remove('active');
+      if (name === 'prestige' || name === 'stats') {
+        document.getElementById('panel-' + name).classList.add('active');
+      }
+    } else {
+      // Mobile: standard tab switching
+      document.querySelectorAll('.panel, #panel-click').forEach(p => p.classList.remove('active'));
+      document.getElementById('panel-' + name).classList.add('active');
+    }
+
+    // Update all nav buttons (both mobile and desktop)
     document.querySelectorAll('.nav-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.panel === name);
     });
+
     if (name === 'generators') this.renderGenerators();
     if (name === 'upgrades') this.renderUpgrades();
     if (name === 'prestige') this.renderEssenceUpgrades();
@@ -2282,10 +2402,28 @@ const Game = {
     const gen = this.generators[index];
     const count = Math.floor(gen.count);
     if (index === 0) {
-      if (count >= 50) return '🍀';
-      if (count >= 25) return '☘️';
-      if (count >= 10) return '🌿';
+      if (count >= 75) return '🍀';
+      if (count >= 50) return '☘️';
+      if (count >= 25) return '🌿';
+      if (count >= 10) return '🌱';
       return '🌱';
+    }
+    if (index === 1) {
+      if (count >= 50) return '🌳';
+      if (count >= 25) return '🌲';
+      if (count >= 10) return '🌿';
+      return '🌿';
+    }
+    if (index === 2) {
+      if (count >= 50) return '🌲';
+      if (count >= 25) return '🌳';
+      if (count >= 10) return '🌲';
+      return '🌳';
+    }
+    if (index === 3) {
+      if (count >= 25) return '🏔️';
+      if (count >= 10) return '🌲';
+      return '🏔️';
     }
     return gen.icon;
   },
