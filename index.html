@@ -19,15 +19,17 @@ canvas { display: block; }
 #sugar-display .icon { font-size: 28px; }
 #sugar-per-sec { font-size: 14px; color: rgba(255,255,255,0.7); margin-left: 5px; }
 
-#timer-bar-container {
-  position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
-  width: 300px; height: 24px; background: rgba(0,0,0,0.5); border-radius: 12px;
-  border: 2px solid rgba(255,255,255,0.3); overflow: hidden; z-index: 10;
+/* Day/night arc */
+#sky-arc {
+  position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+  width: 400px; height: 60px; z-index: 10; pointer-events: none;
 }
-#timer-bar { height: 100%; background: linear-gradient(90deg, #4CAF50, #8BC34A); border-radius: 10px; transition: width 0.3s; width: 100%; }
-#timer-text { position: absolute; width: 100%; text-align: center; line-height: 24px; color: #fff; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+#sky-arc-icon {
+  position: absolute; font-size: 32px; transition: none;
+  filter: drop-shadow(0 0 8px rgba(255,200,0,0.8));
+}
 #quota-display {
-  position: fixed; top: 98px; left: 50%; transform: translateX(-50%);
+  position: fixed; top: 62px; left: 50%; transform: translateX(-50%);
   color: #fff; font-size: 14px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); z-index: 10;
 }
 
@@ -108,7 +110,6 @@ canvas { display: block; }
 .upgrade-cost:disabled { opacity: 0.4; cursor: not-allowed; }
 .upgrade-maxed { color: #4CAF50; font-size: 13px; font-weight: 600; }
 
-/* Skill tree */
 #skill-panel { min-width: 600px; }
 .skill-tree-container { position: relative; width: 540px; height: 480px; margin: 0 auto; }
 .skill-node {
@@ -128,7 +129,6 @@ canvas { display: block; }
 .skill-branch-line.active { background: #4CAF50; box-shadow: 0 0 8px rgba(76,175,80,0.4); }
 .branch-label { position: absolute; color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 600; }
 
-/* Game over */
 #game-over {
   position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200;
   display: none; flex-direction: column; align-items: center; justify-content: center;
@@ -144,7 +144,6 @@ canvas { display: block; }
 }
 #retry-btn:hover { background: rgba(76,175,80,0.6); transform: scale(1.05); }
 
-/* Start screen */
 #start-screen {
   position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -172,9 +171,8 @@ canvas { display: block; }
   <div id="sugar-display"><span class="icon">🍬</span> <span id="sugar-count">0</span><span id="sugar-per-sec"></span></div>
 </div>
 
-<div id="timer-bar-container">
-  <div id="timer-bar"></div>
-  <div id="timer-text">60s</div>
+<div id="sky-arc">
+  <div id="sky-arc-icon">☀️</div>
 </div>
 <div id="quota-display">Quota: 0 / 0</div>
 
@@ -212,6 +210,50 @@ canvas { display: block; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
+// ============ ORBIT CONTROLS (inline mini-implementation) ============
+class SimpleOrbitControls {
+  constructor(camera, domElement) {
+    this.camera = camera;
+    this.domElement = domElement;
+    this.target = new THREE.Vector3(0, 3, 0);
+    this.spherical = new THREE.Spherical();
+    this.sphericalDelta = new THREE.Spherical();
+    this.rotateSpeed = 0.005;
+    this.isDragging = false;
+    this.lastMouse = { x: 0, y: 0 };
+    this.minPolar = 0.2;
+    this.maxPolar = Math.PI / 2 - 0.05;
+    this.minDist = 8;
+    this.maxDist = 40;
+
+    // Init spherical from camera position
+    const offset = new THREE.Vector3().subVectors(camera.position, this.target);
+    this.spherical.setFromVector3(offset);
+
+    domElement.addEventListener('pointerdown', e => {
+      if (e.button === 0) { this.isDragging = true; this.lastMouse = { x: e.clientX, y: e.clientY }; }
+    });
+    domElement.addEventListener('pointermove', e => {
+      if (!this.isDragging) return;
+      const dx = e.clientX - this.lastMouse.x;
+      const dy = e.clientY - this.lastMouse.y;
+      this.spherical.theta -= dx * this.rotateSpeed;
+      this.spherical.phi = Math.max(this.minPolar, Math.min(this.maxPolar, this.spherical.phi + dy * this.rotateSpeed));
+      this.lastMouse = { x: e.clientX, y: e.clientY };
+    });
+    domElement.addEventListener('pointerup', () => { this.isDragging = false; });
+    domElement.addEventListener('wheel', e => {
+      this.spherical.radius = Math.max(this.minDist, Math.min(this.maxDist, this.spherical.radius + e.deltaY * 0.02));
+      e.preventDefault();
+    }, { passive: false });
+  }
+  update() {
+    const offset = new THREE.Vector3().setFromSpherical(this.spherical);
+    this.camera.position.copy(this.target).add(offset);
+    this.camera.lookAt(this.target);
+  }
+}
+
 // ============ GAME STATE ============
 const G = {
   sugar: 0, totalSugar: 0, sugarThisCycle: 0,
@@ -222,13 +264,11 @@ const G = {
   clickPower: 1, passiveGen: 0, weatherResist: 0,
   alive: true, started: false, gameOver: false,
   leafHealth: 1, leafScale: 1,
-  // Upgrades
   upgrades: {
     cuticle: { level: 0, max: 5, baseCost: 15, costMult: 2.2, desc: '+1 sugar/click', icon: '🛡️' },
     chloro: { level: 0, max: 5, baseCost: 30, costMult: 2.5, desc: '+1 passive sugar/sec', icon: '🧬' },
     weatherRes: { level: 0, max: 3, baseCost: 50, costMult: 3, desc: '-25% weather penalty', icon: '🌂' },
   },
-  // Skills
   skills: {},
   deathQuotes: [
     "Every leaf must fall... but not every leaf is forgotten.",
@@ -243,10 +283,10 @@ const G = {
 };
 
 const SEASONS = [
-  { name: 'spring', label: '🌸 Spring', mult: 1.0, sky1: [0.4,0.7,1], sky2: [0.85,0.92,1], ground: 0x4a8c3f },
-  { name: 'summer', label: '☀️ Summer', mult: 1.25, sky1: [0.3,0.6,1], sky2: [1,0.95,0.8], ground: 0x5a9c3f },
-  { name: 'fall', label: '🍂 Fall', mult: 0.75, sky1: [0.8,0.5,0.3], sky2: [1,0.85,0.6], ground: 0x8c6c3f },
-  { name: 'winter', label: '❄️ Winter', mult: 0.5, sky1: [0.6,0.65,0.75], sky2: [0.85,0.87,0.9], ground: 0xcccccc },
+  { name: 'spring', label: '🌸 Spring', mult: 1.0, ground: 0x4a8c3f, leafColors: [0x55cc55, 0x66dd44, 0x77ee55] },
+  { name: 'summer', label: '☀️ Summer', mult: 1.25, ground: 0x3d7a30, leafColors: [0x228822, 0x2d6b2d, 0x1a661a] },
+  { name: 'fall', label: '🍂 Fall', mult: 0.75, ground: 0x8c6c3f, leafColors: [0xdd6622, 0xcc4411, 0xddaa22, 0xbb3300] },
+  { name: 'winter', label: '❄️ Winter', mult: 0.5, ground: 0xaabbcc, leafColors: [0x887744, 0x665533] },
 ];
 
 const WEATHERS = [
@@ -290,89 +330,95 @@ const SKILL_TREE = [
 ];
 
 // ============ THREE.JS SETUP ============
-let scene, camera, renderer, clock;
-let treeTrunk, treeBranches = [], leafMesh, sunMesh, groundMesh;
-let leafGroup, particles = [];
+let scene, camera, renderer, controls;
+let dirLight, ambientLight, sunMesh, moonMesh, groundMesh;
+let leafGroup, leafMesh, leafGlow;
+let fallingLeaves = [], particles = [];
 let rainDrops = [], snowFlakes = [];
+let stars = [];
 let dyingLeaf = null;
+let forestTrees = [];
 
 function initScene() {
   scene = new THREE.Scene();
-  clock = new THREE.Clock();
+  scene.fog = new THREE.FogExp2(0x88aacc, 0.012);
 
-  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.set(0, 4, 10);
-  camera.lookAt(0, 3, 0);
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
+  camera.position.set(0, 6, 18);
 
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
   document.body.prepend(renderer.domElement);
 
+  controls = new SimpleOrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 3, 0);
+
   // Lights
-  const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-  scene.add(ambient);
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  dirLight.position.set(5, 10, 5);
+  ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+  scene.add(ambientLight);
+
+  dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  dirLight.position.set(20, 30, 10);
   dirLight.castShadow = true;
+  dirLight.shadow.mapSize.set(2048, 2048);
+  dirLight.shadow.camera.left = -30;
+  dirLight.shadow.camera.right = 30;
+  dirLight.shadow.camera.top = 30;
+  dirLight.shadow.camera.bottom = -10;
   scene.add(dirLight);
 
+  // Sun sphere
+  const sunGeo = new THREE.SphereGeometry(2, 16, 16);
+  const sunMat = new THREE.MeshBasicMaterial({ color: 0xffee88 });
+  sunMesh = new THREE.Mesh(sunGeo, sunMat);
+  scene.add(sunMesh);
+
+  // Moon sphere
+  const moonGeo = new THREE.SphereGeometry(1.2, 16, 16);
+  const moonMat = new THREE.MeshBasicMaterial({ color: 0xddeeff });
+  moonMesh = new THREE.Mesh(moonGeo, moonMat);
+  scene.add(moonMesh);
+
+  // Stars
+  const starGeo = new THREE.BufferGeometry();
+  const starPositions = [];
+  for (let i = 0; i < 600; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.random() * Math.PI * 0.45;
+    const r = 150 + Math.random() * 50;
+    starPositions.push(
+      r * Math.sin(phi) * Math.cos(theta),
+      r * Math.cos(phi) + 20,
+      r * Math.sin(phi) * Math.sin(theta)
+    );
+  }
+  starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
+  const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.5, transparent: true, opacity: 0 });
+  const starField = new THREE.Points(starGeo, starMat);
+  scene.add(starField);
+  stars = [starField];
+
   // Ground
-  const groundGeo = new THREE.PlaneGeometry(50, 50);
+  const groundGeo = new THREE.PlaneGeometry(200, 200);
   const groundMat = new THREE.MeshLambertMaterial({ color: 0x4a8c3f });
   groundMesh = new THREE.Mesh(groundGeo, groundMat);
   groundMesh.rotation.x = -Math.PI / 2;
   groundMesh.receiveShadow = true;
   scene.add(groundMesh);
 
-  // Tree trunk
-  const trunkGeo = new THREE.CylinderGeometry(0.3, 0.5, 6, 8);
-  const trunkMat = new THREE.MeshLambertMaterial({ color: 0x6d4c2a });
-  treeTrunk = new THREE.Mesh(trunkGeo, trunkMat);
-  treeTrunk.position.set(0, 3, 0);
-  treeTrunk.castShadow = true;
-  scene.add(treeTrunk);
+  // Build forest
+  buildForest();
 
-  // Branches
-  const branchMat = new THREE.MeshLambertMaterial({ color: 0x5d3c1a });
-  for (let i = 0; i < 5; i++) {
-    const bGeo = new THREE.CylinderGeometry(0.08, 0.15, 2 + Math.random(), 6);
-    const branch = new THREE.Mesh(bGeo, branchMat);
-    const angle = (i / 5) * Math.PI * 2 + Math.random() * 0.5;
-    const h = 3.5 + i * 0.6;
-    branch.position.set(Math.cos(angle) * 0.8, h, Math.sin(angle) * 0.8);
-    branch.rotation.z = Math.cos(angle) * 0.6;
-    branch.rotation.x = Math.sin(angle) * 0.3;
-    branch.castShadow = true;
-    scene.add(branch);
-    treeBranches.push(branch);
-  }
-
-  // Tree crown (foliage)
-  const crownMat = new THREE.MeshLambertMaterial({ color: 0x2d7a2d });
-  for (let i = 0; i < 4; i++) {
-    const s = 1.5 + Math.random() * 0.8;
-    const crown = new THREE.Mesh(new THREE.SphereGeometry(s, 8, 6), crownMat);
-    crown.position.set((Math.random()-0.5)*1.5, 5.5 + Math.random()*1.5, (Math.random()-0.5)*1.5);
-    scene.add(crown);
-  }
-
-  // Player leaf
+  // Player leaf — floating in front center
   leafGroup = new THREE.Group();
-  leafGroup.position.set(1.2, 5.2, 1);
+  leafGroup.position.set(0, 4.5, 5);
   scene.add(leafGroup);
   createLeaf();
-
-  // Sun
-  const sunGeo = new THREE.SphereGeometry(1.5, 16, 16);
-  const sunMat = new THREE.MeshBasicMaterial({ color: 0xffdd44 });
-  sunMesh = new THREE.Mesh(sunGeo, sunMat);
-  sunMesh.position.set(10, 15, -10);
-  scene.add(sunMesh);
-
-  // Sky gradient via background
-  updateSkyColors(SEASONS[0]);
 
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -381,44 +427,330 @@ function initScene() {
   });
 }
 
+// ============ FOREST GENERATION ============
+function buildForest() {
+  // Remove old trees
+  forestTrees.forEach(t => scene.remove(t));
+  forestTrees = [];
+
+  const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5d3c1a });
+  const darkTrunkMat = new THREE.MeshLambertMaterial({ color: 0x4a2e15 });
+
+  // Tree positions — spread around, clear center for player leaf
+  const treePositions = [];
+  for (let i = 0; i < 35; i++) {
+    let x, z;
+    do {
+      x = (Math.random() - 0.5) * 80;
+      z = (Math.random() - 0.5) * 80;
+    } while (Math.abs(x) < 4 && z > 0 && z < 10); // keep center clear
+    const scale = 0.6 + Math.random() * 0.8;
+    treePositions.push({ x, z, scale });
+  }
+
+  treePositions.forEach(tp => {
+    const group = new THREE.Group();
+    group.position.set(tp.x, 0, tp.z);
+
+    // Trunk
+    const height = 4 + tp.scale * 4;
+    const trunkGeo = new THREE.CylinderGeometry(0.2 * tp.scale, 0.4 * tp.scale, height, 6);
+    const trunk = new THREE.Mesh(trunkGeo, Math.random() > 0.5 ? trunkMat : darkTrunkMat);
+    trunk.position.y = height / 2;
+    trunk.castShadow = true;
+    group.add(trunk);
+
+    // Branches
+    const branchCount = 3 + Math.floor(Math.random() * 3);
+    for (let b = 0; b < branchCount; b++) {
+      const bLen = 1 + Math.random() * 1.5 * tp.scale;
+      const bGeo = new THREE.CylinderGeometry(0.04 * tp.scale, 0.1 * tp.scale, bLen, 5);
+      const branch = new THREE.Mesh(bGeo, trunkMat);
+      const angle = (b / branchCount) * Math.PI * 2 + Math.random();
+      const bh = height * 0.5 + Math.random() * height * 0.4;
+      branch.position.set(Math.cos(angle) * 0.5 * tp.scale, bh, Math.sin(angle) * 0.5 * tp.scale);
+      branch.rotation.z = Math.cos(angle) * 0.7;
+      branch.rotation.x = Math.sin(angle) * 0.4;
+      branch.castShadow = true;
+      group.add(branch);
+    }
+
+    // Crown foliage — multiple overlapping spheres
+    const crownColor = new THREE.Color(0x2d7a2d);
+    const crownCount = 2 + Math.floor(Math.random() * 3);
+    for (let c = 0; c < crownCount; c++) {
+      const s = (1.2 + Math.random() * 1.0) * tp.scale;
+      const crownMat = new THREE.MeshLambertMaterial({ color: crownColor.clone() });
+      const crown = new THREE.Mesh(new THREE.SphereGeometry(s, 6, 5), crownMat);
+      crown.position.set(
+        (Math.random() - 0.5) * 1.2 * tp.scale,
+        height * 0.85 + Math.random() * 1.5 * tp.scale,
+        (Math.random() - 0.5) * 1.2 * tp.scale
+      );
+      crown.castShadow = true;
+      crown.receiveShadow = true;
+      crown.userData.isCrown = true;
+      group.add(crown);
+    }
+
+    scene.add(group);
+    forestTrees.push(group);
+  });
+}
+
+function updateForestColors() {
+  const season = SEASONS[G.seasonIndex];
+  const seasonColors = {
+    spring: 0x44aa44,
+    summer: 0x2d7a2d,
+    fall: 0xbb6622,
+    winter: 0x667766,
+  };
+  const targetColor = new THREE.Color(seasonColors[season.name]);
+
+  forestTrees.forEach(group => {
+    group.traverse(child => {
+      if (child.isMesh && child.userData.isCrown) {
+        child.material.color.lerp(targetColor, 0.02);
+      }
+    });
+  });
+
+  if (groundMesh) {
+    groundMesh.material.color.lerp(new THREE.Color(season.ground), 0.02);
+  }
+}
+
+// ============ PLAYER LEAF ============
 function createLeaf() {
-  // Remove old leaf
-  while(leafGroup.children.length) leafGroup.remove(leafGroup.children[0]);
+  while (leafGroup.children.length) leafGroup.remove(leafGroup.children[0]);
 
   const leafShape = new THREE.Shape();
-  leafShape.moveTo(0, -0.6);
-  leafShape.bezierCurveTo(0.5, -0.3, 0.6, 0.2, 0.3, 0.6);
-  leafShape.bezierCurveTo(0.1, 0.8, -0.1, 0.8, -0.3, 0.6);
-  leafShape.bezierCurveTo(-0.6, 0.2, -0.5, -0.3, 0, -0.6);
+  leafShape.moveTo(0, -0.8);
+  leafShape.bezierCurveTo(0.7, -0.4, 0.8, 0.3, 0.4, 0.8);
+  leafShape.bezierCurveTo(0.15, 1.05, -0.15, 1.05, -0.4, 0.8);
+  leafShape.bezierCurveTo(-0.8, 0.3, -0.7, -0.4, 0, -0.8);
 
-  const extrudeSettings = { depth: 0.05, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2 };
+  const extrudeSettings = { depth: 0.06, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 3 };
   const leafGeo = new THREE.ExtrudeGeometry(leafShape, extrudeSettings);
-  const leafMat = new THREE.MeshLambertMaterial({ color: 0x44bb44, side: THREE.DoubleSide });
+  const leafMat = new THREE.MeshPhongMaterial({
+    color: 0x44cc44,
+    emissive: 0x114411,
+    emissiveIntensity: 0.3,
+    side: THREE.DoubleSide,
+    shininess: 40,
+  });
   leafMesh = new THREE.Mesh(leafGeo, leafMat);
   leafMesh.castShadow = true;
   leafGroup.add(leafMesh);
 
+  // Glow ring
+  const glowGeo = new THREE.RingGeometry(1.0, 1.4, 32);
+  const glowMat = new THREE.MeshBasicMaterial({ color: 0x66ff66, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
+  leafGlow = new THREE.Mesh(glowGeo, glowMat);
+  leafGlow.position.z = -0.1;
+  leafGroup.add(leafGlow);
+
   // Stem
-  const stemGeo = new THREE.CylinderGeometry(0.02, 0.03, 0.5, 4);
+  const stemGeo = new THREE.CylinderGeometry(0.03, 0.04, 0.6, 4);
   const stemMat = new THREE.MeshLambertMaterial({ color: 0x6d4c2a });
   const stem = new THREE.Mesh(stemGeo, stemMat);
-  stem.position.y = -0.85;
+  stem.position.y = -1.1;
   leafGroup.add(stem);
 }
 
-function updateSkyColors(season) {
-  const c1 = season.sky1, c2 = season.sky2;
-  const canvas = document.createElement('canvas');
-  canvas.width = 2; canvas.height = 256;
-  const ctx = canvas.getContext('2d');
-  const grad = ctx.createLinearGradient(0, 0, 0, 256);
-  grad.addColorStop(0, `rgb(${c1[0]*255|0},${c1[1]*255|0},${c1[2]*255|0})`);
-  grad.addColorStop(1, `rgb(${c2[0]*255|0},${c2[1]*255|0},${c2[2]*255|0})`);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 2, 256);
-  const tex = new THREE.CanvasTexture(canvas);
-  scene.background = tex;
-  if (groundMesh) groundMesh.material.color.setHex(season.ground);
+// ============ DAY/NIGHT CYCLE ============
+function getDayPhase() {
+  // timer goes 60 → 0, so elapsed = 60 - timer
+  const elapsed = 60 - G.timer;
+  // 0=sunrise, 15=noon, 30=sunset, 45=midnight, 60=sunrise
+  return elapsed / 60; // 0..1
+}
+
+function updateDayNightCycle() {
+  const phase = getDayPhase(); // 0..1 through the day
+  // Map to angle: 0=sunrise(east), 0.25=noon(top), 0.5=sunset(west), 0.75=midnight(below)
+  const angle = phase * Math.PI * 2 - Math.PI / 2; // start at east
+
+  const sunRadius = 60;
+  const sunX = Math.cos(angle) * sunRadius;
+  const sunY = Math.sin(angle) * sunRadius;
+  sunMesh.position.set(sunX, sunY, -20);
+
+  // Moon is opposite
+  moonMesh.position.set(-sunX, -sunY, -20);
+
+  // Sun visibility
+  const sunAbove = sunY > -5;
+  sunMesh.visible = sunAbove;
+  moonMesh.visible = !sunAbove;
+
+  // Sky color based on sun height
+  const sunHeight = Math.sin(angle); // -1 to 1
+  let skyTop, skyBottom, fogColor;
+  let dirColor, dirIntensity, ambColor, ambIntensity;
+
+  if (sunHeight > 0.3) {
+    // Daytime — bright
+    const t = Math.min(1, (sunHeight - 0.3) / 0.5);
+    skyTop = lerpColor(0xf0a050, 0x4488dd, t);
+    skyBottom = lerpColor(0xffd0a0, 0xaaccff, t);
+    fogColor = lerpColor(0xddb878, 0x88aacc, t);
+    dirColor = lerpColor(0xffcc88, 0xffffff, t);
+    dirIntensity = 0.8 + t * 0.4;
+    ambColor = lerpColor(0xffe0b0, 0xccddff, t);
+    ambIntensity = 0.4 + t * 0.2;
+  } else if (sunHeight > -0.1) {
+    // Sunrise/sunset transition
+    const t = (sunHeight + 0.1) / 0.4; // 0 at -0.1, 1 at 0.3
+    skyTop = lerpColor(0x1a1a40, 0xf0a050, t);
+    skyBottom = lerpColor(0x2a2040, 0xffd0a0, t);
+    fogColor = lerpColor(0x333355, 0xddb878, t);
+    dirColor = lerpColor(0x4466aa, 0xffcc88, t);
+    dirIntensity = 0.1 + t * 0.7;
+    ambColor = lerpColor(0x223355, 0xffe0b0, t);
+    ambIntensity = 0.15 + t * 0.25;
+  } else {
+    // Night
+    const t = Math.min(1, (-0.1 - sunHeight) / 0.6);
+    skyTop = lerpColor(0x1a1a40, 0x0a0a20, t);
+    skyBottom = lerpColor(0x2a2040, 0x151530, t);
+    fogColor = lerpColor(0x333355, 0x111122, t);
+    dirColor = 0x4466aa;
+    dirIntensity = 0.1 - t * 0.05;
+    ambColor = lerpColor(0x223355, 0x111133, t);
+    ambIntensity = 0.15 - t * 0.05;
+  }
+
+  // Apply sky
+  updateSkyGradient(skyTop, skyBottom);
+  scene.fog.color.set(fogColor);
+
+  // Apply lighting
+  dirLight.color.set(dirColor);
+  dirLight.intensity = Math.max(0.05, dirIntensity);
+  dirLight.position.set(sunX * 0.5, Math.max(5, sunY), -10);
+
+  ambientLight.color.set(ambColor);
+  ambientLight.intensity = Math.max(0.1, ambIntensity);
+
+  // Stars opacity
+  const starOpacity = sunHeight < -0.05 ? Math.min(1, (-0.05 - sunHeight) / 0.3) : 0;
+  if (stars[0]) stars[0].material.opacity = starOpacity * 0.8;
+
+  // Tone mapping exposure
+  renderer.toneMappingExposure = sunHeight > 0 ? 1.0 + sunHeight * 0.3 : Math.max(0.3, 1.0 + sunHeight * 0.7);
+
+  // Update HUD sun/moon arc
+  updateSkyArcHUD(phase);
+}
+
+function lerpColor(c1, c2, t) {
+  const color = new THREE.Color(c1);
+  color.lerp(new THREE.Color(c2), Math.max(0, Math.min(1, t)));
+  return color;
+}
+
+let skyCanvas, skyCtx, skyTexture;
+function updateSkyGradient(topColor, bottomColor) {
+  if (!skyCanvas) {
+    skyCanvas = document.createElement('canvas');
+    skyCanvas.width = 2;
+    skyCanvas.height = 256;
+    skyCtx = skyCanvas.getContext('2d');
+    skyTexture = new THREE.CanvasTexture(skyCanvas);
+  }
+  const top = topColor instanceof THREE.Color ? topColor : new THREE.Color(topColor);
+  const bot = bottomColor instanceof THREE.Color ? bottomColor : new THREE.Color(bottomColor);
+  const grad = skyCtx.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0, `rgb(${top.r*255|0},${top.g*255|0},${top.b*255|0})`);
+  grad.addColorStop(1, `rgb(${bot.r*255|0},${bot.g*255|0},${bot.b*255|0})`);
+  skyCtx.fillStyle = grad;
+  skyCtx.fillRect(0, 0, 2, 256);
+  skyTexture.needsUpdate = true;
+  scene.background = skyTexture;
+}
+
+function updateSkyArcHUD(phase) {
+  const icon = document.getElementById('sky-arc-icon');
+  const arcW = 380;
+  // Arc path: x goes 0→arcW, y is an inverted arc
+  const x = phase * arcW + 10;
+  const y = 50 - Math.sin(phase * Math.PI) * 45;
+  const isDay = phase < 0.5;
+  icon.textContent = isDay ? '☀️' : '🌙';
+  icon.style.left = x + 'px';
+  icon.style.top = y + 'px';
+  icon.style.filter = isDay ?
+    'drop-shadow(0 0 8px rgba(255,200,0,0.8))' :
+    'drop-shadow(0 0 8px rgba(150,180,255,0.8))';
+}
+
+// ============ FALLING LEAVES ============
+const leafGeoTemplate = (() => {
+  const s = new THREE.Shape();
+  s.moveTo(0, -0.3);
+  s.bezierCurveTo(0.2, -0.1, 0.25, 0.1, 0.12, 0.3);
+  s.bezierCurveTo(0.05, 0.38, -0.05, 0.38, -0.12, 0.3);
+  s.bezierCurveTo(-0.25, 0.1, -0.2, -0.1, 0, -0.3);
+  return new THREE.ExtrudeGeometry(s, { depth: 0.01, bevelEnabled: false });
+})();
+
+function spawnFallingLeaf() {
+  const season = SEASONS[G.seasonIndex];
+  const colors = season.leafColors;
+  const color = colors[Math.floor(Math.random() * colors.length)];
+  const mat = new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
+  const leaf = new THREE.Mesh(leafGeoTemplate, mat);
+  const scale = 0.5 + Math.random() * 0.8;
+  leaf.scale.setScalar(scale);
+  leaf.position.set(
+    (Math.random() - 0.5) * 60,
+    10 + Math.random() * 8,
+    (Math.random() - 0.5) * 60
+  );
+  leaf.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+  leaf.userData = {
+    windX: (Math.random() - 0.5) * 2,
+    windZ: (Math.random() - 0.5) * 1,
+    rotSpeed: (Math.random() - 0.5) * 3,
+    swayPhase: Math.random() * Math.PI * 2,
+    fallSpeed: 1 + Math.random() * 1.5,
+  };
+  scene.add(leaf);
+  fallingLeaves.push(leaf);
+}
+
+function updateFallingLeaves(dt) {
+  const season = SEASONS[G.seasonIndex];
+  const isWinter = season.name === 'winter';
+  const maxLeaves = isWinter ? 15 : 60;
+  const spawnRate = isWinter ? 0.3 : 1.5;
+
+  // Spawn
+  if (fallingLeaves.length < maxLeaves && Math.random() < spawnRate * dt * 10) {
+    spawnFallingLeaf();
+  }
+
+  const windEvent = G.event && G.event.name === 'wind';
+  const windBoost = windEvent ? 4 : 1;
+
+  for (let i = fallingLeaves.length - 1; i >= 0; i--) {
+    const leaf = fallingLeaves[i];
+    const ud = leaf.userData;
+    ud.swayPhase += dt * 2;
+
+    leaf.position.y -= ud.fallSpeed * dt;
+    leaf.position.x += (ud.windX + Math.sin(ud.swayPhase) * 0.5) * dt * windBoost;
+    leaf.position.z += (ud.windZ + Math.cos(ud.swayPhase * 0.7) * 0.3) * dt * windBoost;
+    leaf.rotation.x += ud.rotSpeed * dt;
+    leaf.rotation.z += ud.rotSpeed * 0.5 * dt;
+
+    if (leaf.position.y < -1 || Math.abs(leaf.position.x) > 50 || Math.abs(leaf.position.z) > 50) {
+      scene.remove(leaf);
+      fallingLeaves.splice(i, 1);
+    }
+  }
 }
 
 // ============ GAME LOGIC ============
@@ -435,13 +767,12 @@ function startGame() {
 }
 
 function restartGame() {
-  // Reset state
   Object.assign(G, {
     sugar: 0, totalSugar: 0, sugarThisCycle: 0,
     cycle: 1, timer: 60, quota: 10,
     season: 'spring', seasonTimer: 0, seasonIndex: 0,
     weather: 'sunny', weatherTimer: 0, weatherDuration: 0,
-    event: null, eventTimer: 0, eventDuration: 0, nextEventIn: 30 + Math.random()*30,
+    event: null, eventTimer: 0, eventDuration: 0, nextEventIn: 30 + Math.random() * 30,
     clickPower: 1, passiveGen: 0, weatherResist: 0,
     alive: true, gameOver: false, leafHealth: 1, leafScale: 1,
     skills: {},
@@ -451,20 +782,20 @@ function restartGame() {
       weatherRes: { level: 0, max: 3, baseCost: 50, costMult: 3, desc: '-25% weather penalty', icon: '🌂' },
     },
   });
-  // Reset skill tree unlocked states
   SKILL_TREE.forEach(b => b.nodes.forEach(n => n.unlocked = false));
   nextWeatherIn = 15 + Math.random() * 15;
-
   document.getElementById('game-over').style.display = 'none';
 
-  // Reset leaf
-  leafGroup.position.set(1.2, 5.2, 1);
+  leafGroup.position.set(0, 4.5, 5);
   leafGroup.rotation.set(0, 0, 0);
-  if (leafMesh) leafMesh.material.color.setHex(0x44bb44);
+  leafGroup.visible = true;
   createLeaf();
   if (dyingLeaf) { scene.remove(dyingLeaf); dyingLeaf = null; }
 
-  updateSkyColors(SEASONS[0]);
+  // Clear falling leaves
+  fallingLeaves.forEach(l => scene.remove(l));
+  fallingLeaves = [];
+
   updateHUD();
   gameLoop(performance.now());
 }
@@ -481,7 +812,6 @@ function gameLoop(now) {
     G.timer -= dt;
     if (G.timer <= 0) {
       if (G.sugarThisCycle >= G.quota) {
-        // Survived cycle
         G.cycle++;
         G.timer = 60;
         G.quota = Math.floor(G.quota * 1.4 + 5);
@@ -501,7 +831,6 @@ function gameLoop(now) {
       G.seasonTimer = 0;
       G.seasonIndex = (G.seasonIndex + 1) % 4;
       G.season = SEASONS[G.seasonIndex].name;
-      updateSkyColors(SEASONS[G.seasonIndex]);
     }
 
     // Weather
@@ -543,12 +872,15 @@ function gameLoop(now) {
     }
   }
 
-  // Animate
+  // Visuals
+  updateDayNightCycle();
+  updateForestColors();
   updateLeafAnimation(dt);
+  updateFallingLeaves(dt);
   updateParticles(dt);
   updateRainSnow(dt);
   if (dyingLeaf) updateDyingLeaf(dt);
-
+  controls.update();
   updateHUD();
   renderer.render(scene, camera);
   requestAnimationFrame(gameLoop);
@@ -561,11 +893,9 @@ function getMultiplier() {
 
   const weatherData = WEATHERS.find(w => w.name === G.weather);
   let weatherMult = weatherData ? weatherData.mult : 1;
-  // Apply weather resistance
   if (weatherMult < 1) {
     const penalty = 1 - weatherMult;
-    const resist = G.weatherResist;
-    weatherMult = 1 - penalty * Math.max(0, 1 - resist);
+    weatherMult = 1 - penalty * Math.max(0, 1 - G.weatherResist);
   }
 
   let eventMult = G.event ? G.event.mult : 1;
@@ -580,23 +910,21 @@ function doPhotosynthesis(e) {
   G.totalSugar += amount;
   G.sugarThisCycle += amount;
 
-  // Float text
   const ft = document.createElement('div');
   ft.className = 'float-text';
   ft.textContent = `+${amount}`;
-  const bx = e.clientX || window.innerWidth/2;
+  const bx = e.clientX || window.innerWidth / 2;
   const by = e.clientY || window.innerHeight - 150;
-  ft.style.left = (bx + (Math.random()-0.5)*40) + 'px';
+  ft.style.left = (bx + (Math.random() - 0.5) * 40) + 'px';
   ft.style.top = (by - 20) + 'px';
   document.body.appendChild(ft);
   setTimeout(() => ft.remove(), 1000);
 
-  // Leaf bounce
   leafGroup.scale.setScalar(G.leafScale * 1.15);
-  setTimeout(() => { if(G.alive) leafGroup.scale.setScalar(G.leafScale); }, 100);
+  setTimeout(() => { if (G.alive) leafGroup.scale.setScalar(G.leafScale); }, 100);
 
-  // Particle
-  spawnParticle();
+  // Burst particles
+  for (let i = 0; i < 3; i++) spawnParticle();
 }
 
 // ============ PARTICLES ============
@@ -605,7 +933,7 @@ function spawnParticle() {
   const mat = new THREE.MeshBasicMaterial({ color: 0xffdd00, transparent: true });
   const p = new THREE.Mesh(geo, mat);
   p.position.copy(leafGroup.position);
-  p.velocity = new THREE.Vector3((Math.random()-0.5)*2, Math.random()*3+1, (Math.random()-0.5)*2);
+  p.velocity = new THREE.Vector3((Math.random() - 0.5) * 2, Math.random() * 3 + 1, (Math.random() - 0.5) * 2);
   p.life = 1;
   scene.add(p);
   particles.push(p);
@@ -627,46 +955,38 @@ function updateRainSnow(dt) {
   const needRain = G.weather === 'rain' && G.alive;
   const needSnow = G.season === 'winter' && G.alive;
 
-  // Create drops
-  if (needRain && rainDrops.length < 100) {
-    for (let i = 0; i < 3; i++) {
-      const geo = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 3);
-      const mat = new THREE.MeshBasicMaterial({ color: 0x4488cc, transparent: true, opacity: 0.6 });
+  if (needRain && rainDrops.length < 150) {
+    for (let i = 0; i < 5; i++) {
+      const geo = new THREE.CylinderGeometry(0.02, 0.02, 0.4, 3);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x4488cc, transparent: true, opacity: 0.5 });
       const drop = new THREE.Mesh(geo, mat);
-      drop.position.set((Math.random()-0.5)*20, 15+Math.random()*5, (Math.random()-0.5)*20);
+      drop.position.set((Math.random() - 0.5) * 50, 18 + Math.random() * 5, (Math.random() - 0.5) * 50);
       scene.add(drop);
       rainDrops.push(drop);
     }
   }
-
-  // Update rain
   for (let i = rainDrops.length - 1; i >= 0; i--) {
     const d = rainDrops[i];
-    d.position.y -= dt * 15;
-    if (d.position.y < 0 || !needRain) {
-      scene.remove(d);
-      rainDrops.splice(i, 1);
-    }
+    d.position.y -= dt * 18;
+    if (d.position.y < 0 || !needRain) { scene.remove(d); rainDrops.splice(i, 1); }
   }
 
-  // Snow
-  if (needSnow && snowFlakes.length < 50) {
-    const geo = new THREE.SphereGeometry(0.05, 4, 4);
-    const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
-    const flake = new THREE.Mesh(geo, mat);
-    flake.position.set((Math.random()-0.5)*20, 15, (Math.random()-0.5)*20);
-    flake.drift = Math.random() * 2 - 1;
-    scene.add(flake);
-    snowFlakes.push(flake);
+  if (needSnow && snowFlakes.length < 80) {
+    for (let i = 0; i < 2; i++) {
+      const geo = new THREE.SphereGeometry(0.06, 4, 4);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
+      const flake = new THREE.Mesh(geo, mat);
+      flake.position.set((Math.random() - 0.5) * 50, 18, (Math.random() - 0.5) * 50);
+      flake.drift = Math.random() * 2 - 1;
+      scene.add(flake);
+      snowFlakes.push(flake);
+    }
   }
   for (let i = snowFlakes.length - 1; i >= 0; i--) {
     const f = snowFlakes[i];
-    f.position.y -= dt * 2;
-    f.position.x += Math.sin(f.position.y + f.drift) * dt * 0.5;
-    if (f.position.y < 0 || !needSnow) {
-      scene.remove(f);
-      snowFlakes.splice(i, 1);
-    }
+    f.position.y -= dt * 1.5;
+    f.position.x += Math.sin(f.position.y * 0.5 + f.drift) * dt * 0.8;
+    if (f.position.y < 0 || !needSnow) { scene.remove(f); snowFlakes.splice(i, 1); }
   }
 }
 
@@ -675,13 +995,20 @@ let leafTime = 0;
 function updateLeafAnimation(dt) {
   leafTime += dt;
   if (G.alive && leafMesh) {
-    // Gentle sway
-    let swayAmt = 0.05;
-    if (G.event && G.event.name === 'wind') swayAmt = 0.3;
+    let swayAmt = 0.08;
+    if (G.event && G.event.name === 'wind') swayAmt = 0.35;
     leafGroup.rotation.z = Math.sin(leafTime * 1.5) * swayAmt;
     leafGroup.rotation.x = Math.sin(leafTime * 0.8) * swayAmt * 0.5;
 
-    // Color effects
+    // Hover bob
+    leafGroup.position.y = 4.5 + Math.sin(leafTime * 1.2) * 0.15;
+
+    // Glow pulse
+    if (leafGlow) {
+      leafGlow.material.opacity = 0.1 + Math.sin(leafTime * 2) * 0.08;
+      leafGlow.rotation.z = leafTime * 0.2;
+    }
+
     if (G.skills.colorShift) {
       const hue = (leafTime * 0.1) % 1;
       leafMesh.material.color.setHSL(hue, 0.7, 0.45);
@@ -697,19 +1024,14 @@ function updateLeafAnimation(dt) {
 // ============ DEATH ============
 function triggerDeath() {
   G.alive = false;
-
-  // Turn leaf brown
   if (leafMesh) leafMesh.material.color.setHex(0x8B6914);
 
-  // Create dying leaf copy
   dyingLeaf = leafGroup.clone();
   dyingLeaf.position.copy(leafGroup.position);
   scene.add(dyingLeaf);
-  dyingLeaf.velocity = new THREE.Vector3((Math.random()-0.5)*2, 1, (Math.random()-0.5)*2);
-  dyingLeaf.rotVel = new THREE.Vector3(Math.random()*3, Math.random()*5, Math.random()*3);
+  dyingLeaf.velocity = new THREE.Vector3((Math.random() - 0.5) * 2, 1, (Math.random() - 0.5) * 2);
+  dyingLeaf.rotVel = new THREE.Vector3(Math.random() * 3, Math.random() * 5, Math.random() * 3);
   dyingLeaf.landed = false;
-
-  // Hide original
   leafGroup.visible = false;
 }
 
@@ -722,20 +1044,17 @@ function updateDyingLeaf(dt) {
     return;
   }
   dyingLeaf.velocity.y -= dt * 4;
-  // Air resistance / tumble
   dyingLeaf.velocity.x *= (1 - dt * 0.5);
   dyingLeaf.velocity.z *= (1 - dt * 0.5);
   dyingLeaf.velocity.x += Math.sin(leafTime * 3) * dt * 2;
-
   dyingLeaf.position.add(dyingLeaf.velocity.clone().multiplyScalar(dt));
   dyingLeaf.rotation.x += dyingLeaf.rotVel.x * dt;
   dyingLeaf.rotation.y += dyingLeaf.rotVel.y * dt;
   dyingLeaf.rotation.z += dyingLeaf.rotVel.z * dt;
-
   if (dyingLeaf.position.y <= 0.1) {
     dyingLeaf.position.y = 0.1;
     dyingLeaf.landed = true;
-    dyingLeaf.rotVel.set(0,0,0);
+    dyingLeaf.rotVel.set(0, 0, 0);
   }
 }
 
@@ -753,15 +1072,8 @@ function updateHUD() {
   const perSec = (G.passiveGen * getMultiplier()).toFixed(1);
   document.getElementById('sugar-per-sec').textContent = G.passiveGen > 0 ? `(${perSec}/s)` : '';
 
-  // Timer
-  const pct = Math.max(0, (G.timer / 60) * 100);
-  const bar = document.getElementById('timer-bar');
-  bar.style.width = pct + '%';
-  bar.style.background = pct > 30 ? 'linear-gradient(90deg, #4CAF50, #8BC34A)' : pct > 15 ? 'linear-gradient(90deg, #FF9800, #FFC107)' : 'linear-gradient(90deg, #f44336, #FF5722)';
-  document.getElementById('timer-text').textContent = `${Math.ceil(G.timer)}s`;
-  document.getElementById('quota-display').textContent = `Quota: ${Math.floor(G.sugarThisCycle)} / ${G.quota}`;
+  document.getElementById('quota-display').textContent = `Quota: ${Math.floor(G.sugarThisCycle)} / ${G.quota}  •  ${Math.ceil(G.timer)}s`;
 
-  // Status pills
   document.getElementById('season-pill').textContent = SEASONS[G.seasonIndex].label;
   const wData = WEATHERS.find(w => w.name === G.weather);
   document.getElementById('weather-pill').textContent = wData ? wData.label : '☀️ Sunny';
@@ -830,14 +1142,11 @@ function toggleSkills() {
 function renderSkillTree() {
   const container = document.getElementById('skill-tree');
   container.innerHTML = '';
-
-  // Layout: trunk at bottom center, branches spread out
   const cx = 270, trunkBottom = 450, trunkTop = 380;
 
-  // Draw trunk
   const trunk = document.createElement('div');
   trunk.className = 'skill-branch-line';
-  trunk.style.cssText = `left:${cx-4}px; top:${trunkTop}px; width:8px; height:${trunkBottom-trunkTop}px; border-radius:4px; background:#6d4c2a;`;
+  trunk.style.cssText = `left:${cx - 4}px; top:${trunkTop}px; width:8px; height:${trunkBottom - trunkTop}px; border-radius:4px; background:#6d4c2a;`;
   container.appendChild(trunk);
 
   const branchConfigs = [
@@ -851,7 +1160,6 @@ function renderSkillTree() {
     const cfg = branchConfigs[bi];
     const nodes = branch.nodes;
 
-    // Branch label
     const lbl = document.createElement('div');
     lbl.className = 'branch-label';
     lbl.textContent = branch.label;
@@ -862,24 +1170,20 @@ function renderSkillTree() {
       const x = cx + cfg.dx;
       const y = cfg.startY - ni * 80 - 30;
 
-      // Connection line to previous or trunk
       if (ni === 0) {
-        // Line from trunk to first node
         drawLine(container, cx, trunkTop, x, y + 28, branch.color, node.unlocked);
       } else {
-        const py = cfg.startY - (ni-1) * 80 - 30;
+        const py = cfg.startY - (ni - 1) * 80 - 30;
         drawLine(container, x, py - 28, x, y + 28, branch.color, node.unlocked);
       }
 
-      // Node
-      const prev = ni === 0 ? true : nodes[ni-1].unlocked;
-      const canBuy = prev && !node.unlocked && G.sugar >= node.cost;
+      const prev = ni === 0 ? true : nodes[ni - 1].unlocked;
       const cls = node.unlocked ? 'unlocked' : (prev && G.sugar >= node.cost) ? 'available' : 'locked';
 
       const el = document.createElement('div');
       el.className = `skill-node ${cls}`;
       el.style.cssText = `left:${x - 28}px; top:${y - 28}px;`;
-      el.innerHTML = `${node.name}<span class="cost">${node.unlocked ? '✓' : '🍬'+node.cost}</span>`;
+      el.innerHTML = `${node.name}<span class="cost">${node.unlocked ? '✓' : '🍬' + node.cost}</span>`;
       el.title = node.desc;
       if (!node.unlocked && prev) {
         el.onclick = () => buySkill(branch, bi, ni);
@@ -890,8 +1194,8 @@ function renderSkillTree() {
 }
 
 function drawLine(container, x1, y1, x2, y2, color, active) {
-  const dx = x2-x1, dy = y2-y1;
-  const len = Math.sqrt(dx*dx + dy*dy);
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy);
   const angle = Math.atan2(dy, dx) * 180 / Math.PI;
   const line = document.createElement('div');
   line.className = `skill-branch-line ${active ? 'active' : ''}`;
@@ -903,7 +1207,7 @@ function drawLine(container, x1, y1, x2, y2, color, active) {
 function buySkill(branch, bi, ni) {
   const node = branch.nodes[ni];
   if (node.unlocked) return;
-  const prev = ni === 0 ? true : branch.nodes[ni-1].unlocked;
+  const prev = ni === 0 ? true : branch.nodes[ni - 1].unlocked;
   if (!prev || G.sugar < node.cost) return;
   G.sugar -= node.cost;
   node.unlocked = true;
@@ -914,19 +1218,10 @@ function buySkill(branch, bi, ni) {
 // ============ CLICK ON 3D LEAF ============
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
-renderer && renderer.domElement.addEventListener('click', (e) => {
-  if (!G.alive || !G.started) return;
-  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-  raycaster.setFromCamera(mouse, camera);
-  const hits = raycaster.intersectObjects(leafGroup.children, true);
-  if (hits.length > 0) doPhotosynthesis(e);
-});
 
 // ============ INIT ============
 initScene();
 
-// Add click listener on canvas for leaf clicks
 renderer.domElement.addEventListener('click', (e) => {
   if (!G.alive || !G.started) return;
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
