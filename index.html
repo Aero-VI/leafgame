@@ -87,10 +87,12 @@ canvas { display: block; }
 }
 .panel-title { font-size: 24px; color: #fff; margin-bottom: 20px; text-align: center; }
 .panel-close {
-  position: absolute; top: 10px; right: 15px; color: #fff; font-size: 24px;
-  cursor: pointer; opacity: 0.7; background: none; border: none;
+  position: absolute; top: 10px; right: 10px; color: #fff; font-size: 28px;
+  cursor: pointer; opacity: 0.9; background: rgba(255,60,60,0.5); border: 2px solid rgba(255,255,255,0.4);
+  width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  z-index: 110; line-height: 1; padding: 0;
 }
-.panel-close:hover { opacity: 1; }
+.panel-close:hover { opacity: 1; background: rgba(255,60,60,0.8); }
 
 .upgrade-item {
   display: flex; justify-content: space-between; align-items: center;
@@ -110,6 +112,9 @@ canvas { display: block; }
 .upgrade-cost:disabled { opacity: 0.4; cursor: not-allowed; }
 .upgrade-maxed { color: #4CAF50; font-size: 13px; font-weight: 600; }
 
+.panel-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 99;
+}
 #skill-panel { min-width: 600px; }
 .skill-tree-container { position: relative; width: 540px; height: 480px; margin: 0 auto; }
 .skill-node {
@@ -144,7 +149,7 @@ canvas { display: block; }
 }
 #retry-btn:hover { background: rgba(76,175,80,0.6); transform: scale(1.05); }
 
-/* Aphid minigame */
+/* Aphid minigame - screen overlay */
 #aphid-overlay {
   position: fixed; inset: 0; z-index: 50; pointer-events: none; display: none;
 }
@@ -165,6 +170,48 @@ canvas { display: block; }
   font-size: 36px; font-weight: bold; z-index: 55; pointer-events: none; display: none;
   text-shadow: 0 0 15px currentColor, 2px 2px 4px rgba(0,0,0,0.8);
   animation: floatUp 1.5s ease-out forwards;
+}
+.aphid-sprite {
+  position: fixed; z-index: 52; width: 44px; height: 44px; font-size: 32px;
+  cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: center;
+  transition: transform 0.1s; pointer-events: auto; -webkit-tap-highlight-color: transparent;
+}
+.aphid-sprite:active { transform: scale(0.6); }
+.aphid-sprite.squashed { pointer-events: none; opacity: 0.4; transform: scale(0.3) rotate(45deg); transition: all 0.3s; }
+
+/* Event banners */
+#event-banner {
+  position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+  padding: 12px 30px; border-radius: 16px; font-size: 22px; font-weight: bold;
+  color: #fff; z-index: 60; pointer-events: none; display: none;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.7); animation: bannerPop 0.4s ease-out;
+  white-space: nowrap;
+}
+@keyframes bannerPop { 0% { transform: translateX(-50%) scale(0.5); opacity: 0; } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
+
+/* Screen effects */
+#screen-border-effect {
+  position: fixed; inset: 0; z-index: 45; pointer-events: none; display: none;
+}
+#rainbow-overlay {
+  position: fixed; top: 0; left: 0; right: 0; height: 80px; z-index: 45; pointer-events: none; display: none;
+  background: linear-gradient(180deg, rgba(255,0,0,0.15), rgba(255,165,0,0.12), rgba(255,255,0,0.1), rgba(0,128,0,0.1), rgba(0,0,255,0.1), rgba(75,0,130,0.08), transparent);
+}
+#sparkle-container { position: fixed; inset: 0; z-index: 45; pointer-events: none; display: none; }
+.sparkle {
+  position: absolute; width: 8px; height: 8px; border-radius: 50%;
+  background: radial-gradient(circle, #FFD700, transparent);
+  animation: sparkleAnim 1s ease-out infinite;
+}
+@keyframes sparkleAnim { 0% { transform: scale(0); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.8; } 100% { transform: scale(0); opacity: 0; } }
+
+/* Sound unmute button (prominent) */
+#unmute-btn {
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+  z-index: 15; padding: 10px 24px; border-radius: 25px;
+  border: 2px solid rgba(255,255,255,0.4); background: rgba(76,175,80,0.7);
+  color: #fff; font-size: 16px; font-weight: bold; cursor: pointer;
+  backdrop-filter: blur(10px); animation: pulse 2s infinite; display: none;
 }
 
 #sound-toggle {
@@ -220,17 +267,24 @@ canvas { display: block; }
 <div id="aphid-timer"></div>
 <div id="aphid-count"></div>
 <div id="aphid-result"></div>
+<div id="event-banner"></div>
+<div id="screen-border-effect"></div>
+<div id="rainbow-overlay"></div>
+<div id="sparkle-container"></div>
+<button id="unmute-btn" onclick="enableSound()">🔊 Tap to Enable Sound</button>
 <button id="shop-btn" onclick="toggleShop()">🛒 Shop</button>
 <button id="skill-btn" onclick="toggleSkills()">🌳 Skills</button>
 
+<div id="shop-backdrop" class="panel-backdrop" onclick="closeShop()" style="display:none;"></div>
 <div id="shop-panel">
-  <button class="panel-close" onclick="toggleShop()">✕</button>
+  <button class="panel-close" onclick="closeShop()">✕</button>
   <div class="panel-title">🛒 Sugar Shop</div>
   <div id="shop-items"></div>
 </div>
 
+<div id="skill-backdrop" class="panel-backdrop" onclick="closeSkills()" style="display:none;"></div>
 <div id="skill-panel">
-  <button class="panel-close" onclick="toggleSkills()">✕</button>
+  <button class="panel-close" onclick="closeSkills()">✕</button>
   <div class="panel-title">🌳 Skill Tree</div>
   <div class="skill-tree-container" id="skill-tree"></div>
 </div>
@@ -562,39 +616,83 @@ function updateForestColors() {
 function createLeaf() {
   while (leafGroup.children.length) leafGroup.remove(leafGroup.children[0]);
 
+  // Proper leaf shape — pointed tip, wider middle, tapered base with slight asymmetry
   const leafShape = new THREE.Shape();
-  leafShape.moveTo(0, -0.8);
-  leafShape.bezierCurveTo(0.7, -0.4, 0.8, 0.3, 0.4, 0.8);
-  leafShape.bezierCurveTo(0.15, 1.05, -0.15, 1.05, -0.4, 0.8);
-  leafShape.bezierCurveTo(-0.8, 0.3, -0.7, -0.4, 0, -0.8);
+  // Start at stem base
+  leafShape.moveTo(0, -1.2);
+  // Right side — curves out then to pointed tip
+  leafShape.bezierCurveTo(0.15, -1.0, 0.5, -0.7, 0.85, -0.2);
+  leafShape.bezierCurveTo(1.0, 0.1, 0.9, 0.5, 0.7, 0.8);
+  leafShape.bezierCurveTo(0.45, 1.15, 0.15, 1.4, 0, 1.55); // pointed tip
+  // Left side — mirror back down
+  leafShape.bezierCurveTo(-0.15, 1.4, -0.45, 1.15, -0.7, 0.8);
+  leafShape.bezierCurveTo(-0.9, 0.5, -1.0, 0.1, -0.85, -0.2);
+  leafShape.bezierCurveTo(-0.5, -0.7, -0.15, -1.0, 0, -1.2);
 
-  const extrudeSettings = { depth: 0.06, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 3 };
+  const extrudeSettings = { depth: 0.04, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2 };
   const leafGeo = new THREE.ExtrudeGeometry(leafShape, extrudeSettings);
   const leafMat = new THREE.MeshPhongMaterial({
-    color: 0x44cc44,
-    emissive: 0x114411,
+    color: 0x33aa33,
+    emissive: 0x0a220a,
     emissiveIntensity: 0.3,
     side: THREE.DoubleSide,
-    shininess: 40,
+    shininess: 50,
   });
   leafMesh = new THREE.Mesh(leafGeo, leafMat);
   leafMesh.castShadow = true;
-  leafMesh.userData.baseEmissive = 0x114411;
+  leafMesh.userData.baseEmissive = 0x0a220a;
   leafMesh.userData.baseEmissiveIntensity = 0.3;
   leafGroup.add(leafMesh);
 
+  // Vein lines — central midrib + side veins
+  const veinMat = new THREE.MeshBasicMaterial({ color: 0x226622, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+
+  // Central midrib (stem to tip)
+  const midribShape = new THREE.Shape();
+  midribShape.moveTo(-0.02, -1.2);
+  midribShape.lineTo(0.02, -1.2);
+  midribShape.lineTo(0.015, 1.5);
+  midribShape.lineTo(-0.015, 1.5);
+  midribShape.lineTo(-0.02, -1.2);
+  const midribGeo = new THREE.ShapeGeometry(midribShape);
+  const midrib = new THREE.Mesh(midribGeo, veinMat);
+  midrib.position.z = 0.06;
+  leafGroup.add(midrib);
+
+  // Side veins
+  const sideVeinPositions = [
+    { y: -0.5, len: 0.6, angle: 0.5 },
+    { y: -0.1, len: 0.75, angle: 0.45 },
+    { y: 0.3, len: 0.7, angle: 0.4 },
+    { y: 0.65, len: 0.55, angle: 0.35 },
+    { y: 0.95, len: 0.35, angle: 0.3 },
+  ];
+  sideVeinPositions.forEach(v => {
+    for (let side = -1; side <= 1; side += 2) {
+      const veinShape = new THREE.Shape();
+      veinShape.moveTo(0, 0);
+      veinShape.lineTo(side * v.len * Math.cos(v.angle), v.len * Math.sin(v.angle));
+      veinShape.lineTo(side * v.len * Math.cos(v.angle) - 0.01, v.len * Math.sin(v.angle) + 0.015);
+      veinShape.lineTo(0, 0.015);
+      const vGeo = new THREE.ShapeGeometry(veinShape);
+      const vMesh = new THREE.Mesh(vGeo, veinMat);
+      vMesh.position.set(0, v.y, 0.06);
+      leafGroup.add(vMesh);
+    }
+  });
+
   // Glow ring
-  const glowGeo = new THREE.RingGeometry(1.0, 1.4, 32);
+  const glowGeo = new THREE.RingGeometry(1.3, 1.7, 32);
   const glowMat = new THREE.MeshBasicMaterial({ color: 0x66ff66, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
   leafGlow = new THREE.Mesh(glowGeo, glowMat);
   leafGlow.position.z = -0.1;
   leafGroup.add(leafGlow);
 
-  // Stem
-  const stemGeo = new THREE.CylinderGeometry(0.03, 0.04, 0.6, 4);
-  const stemMat = new THREE.MeshLambertMaterial({ color: 0x6d4c2a });
+  // Stem — thicker, longer
+  const stemGeo = new THREE.CylinderGeometry(0.04, 0.06, 0.8, 5);
+  const stemMat = new THREE.MeshLambertMaterial({ color: 0x5d3c1a });
   const stem = new THREE.Mesh(stemGeo, stemMat);
-  stem.position.y = -1.1;
+  stem.position.y = -1.6;
   leafGroup.add(stem);
 
   // Always-visible point light on the leaf so it glows at night
@@ -815,6 +913,12 @@ function startGame() {
   G.alive = true;
   G.nextEventIn = 30 + Math.random() * 30;
   nextWeatherIn = 15 + Math.random() * 15;
+  // Show unmute prompt if sound not yet enabled
+  if (!soundEnabled) {
+    document.getElementById('unmute-btn').style.display = 'block';
+  }
+  // Try to init audio on this user gesture
+  initAudio();
   gameLoop(performance.now());
 }
 
@@ -851,11 +955,14 @@ function restartGame() {
   clearSeasonalCosmetics();
   lastSeasonForCosmetics = -1;
   if (aphidGame.active) {
-    aphidGame.aphids.forEach(a => scene.remove(a.mesh));
     aphidGame.active = false;
     aphidGame.aphids = [];
-    aphidMeshes = [];
+    aphidGame.remaining = 0;
+    const overlay = document.getElementById('aphid-overlay');
+    overlay.classList.remove('active');
+    overlay.innerHTML = '';
   }
+  hideEventEffects();
 
   updateHUD();
   gameLoop(performance.now());
@@ -934,11 +1041,12 @@ function gameLoop(now) {
         G.eventDuration = ev.duration;
         G.eventTimer = ev.duration;
         G.nextEventIn = 30 + Math.random() * 30;
+        showEventBanner(ev.name);
       }
     }
     if (G.event) {
       G.eventTimer -= dt;
-      if (G.eventTimer <= 0) { G.event = null; }
+      if (G.eventTimer <= 0) { G.event = null; hideEventEffects(); }
     }
 
     // Aphid minigame tick
@@ -1178,12 +1286,21 @@ function updateHUD() {
 }
 
 // ============ SHOP ============
+function closeShop() {
+  document.getElementById('shop-panel').style.display = 'none';
+  document.getElementById('shop-backdrop').style.display = 'none';
+}
+function closeSkills() {
+  document.getElementById('skill-panel').style.display = 'none';
+  document.getElementById('skill-backdrop').style.display = 'none';
+}
 function toggleShop() {
   const panel = document.getElementById('shop-panel');
-  const skillPanel = document.getElementById('skill-panel');
-  skillPanel.style.display = 'none';
-  panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
-  if (panel.style.display === 'block') renderShop();
+  closeSkills();
+  const showing = panel.style.display === 'block';
+  panel.style.display = showing ? 'none' : 'block';
+  document.getElementById('shop-backdrop').style.display = showing ? 'none' : 'block';
+  if (!showing) renderShop();
 }
 
 function renderShop() {
@@ -1222,10 +1339,11 @@ function buyUpgrade(key) {
 // ============ SKILL TREE ============
 function toggleSkills() {
   const panel = document.getElementById('skill-panel');
-  const shopPanel = document.getElementById('shop-panel');
-  shopPanel.style.display = 'none';
-  panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
-  if (panel.style.display === 'block') renderSkillTree();
+  closeShop();
+  const showing = panel.style.display === 'block';
+  panel.style.display = showing ? 'none' : 'block';
+  document.getElementById('skill-backdrop').style.display = showing ? 'none' : 'block';
+  if (!showing) renderSkillTree();
 }
 
 function renderSkillTree() {
@@ -1304,68 +1422,90 @@ function buySkill(branch, bi, ni) {
   renderSkillTree();
 }
 
-// ============ APHID MINIGAME ============
-const aphidGame = { active: false, aphids: [], timer: 0, totalAphids: 0 };
-let aphidMeshes = [];
+// ============ APHID MINIGAME (HTML OVERLAY - MOBILE FRIENDLY) ============
+const aphidGame = { active: false, aphids: [], timer: 0, totalAphids: 0, remaining: 0 };
+let aphidMeshes = []; // kept for compat but unused now
 
 function startAphidMinigame() {
   aphidGame.active = true;
   aphidGame.timer = 10;
   aphidGame.aphids = [];
-  aphidMeshes = [];
   const count = 5 + Math.floor(Math.random() * 4); // 5-8
   aphidGame.totalAphids = count;
+  aphidGame.remaining = count;
 
+  const overlay = document.getElementById('aphid-overlay');
+  overlay.innerHTML = '';
+  overlay.classList.add('active');
+
+  const bugEmojis = ['🐛', '🪲', '🐜'];
   for (let i = 0; i < count; i++) {
-    const geo = new THREE.SphereGeometry(0.25, 6, 6);
-    const color = Math.random() > 0.5 ? 0x44aa22 : 0x886633;
-    const mat = new THREE.MeshBasicMaterial({ color });
-    const mesh = new THREE.Mesh(geo, mat);
-    // Place on trees or flying near them
-    const tree = forestTrees[Math.floor(Math.random() * forestTrees.length)];
-    if (tree) {
-      mesh.position.set(
-        tree.position.x + (Math.random() - 0.5) * 3,
-        2 + Math.random() * 6,
-        tree.position.z + (Math.random() - 0.5) * 3
-      );
-    } else {
-      mesh.position.set((Math.random() - 0.5) * 20, 3 + Math.random() * 5, (Math.random() - 0.5) * 20);
-    }
-    mesh.userData.aphidId = i;
-    mesh.userData.bobPhase = Math.random() * Math.PI * 2;
-    mesh.userData.bobSpeed = 1 + Math.random();
-    mesh.userData.baseY = mesh.position.y;
-    scene.add(mesh);
-    aphidGame.aphids.push({ mesh, alive: true });
-    aphidMeshes.push(mesh);
+    const sprite = document.createElement('div');
+    sprite.className = 'aphid-sprite';
+    sprite.textContent = bugEmojis[Math.floor(Math.random() * bugEmojis.length)];
+    // Random screen position (avoid edges)
+    const margin = 50;
+    sprite.style.left = (margin + Math.random() * (window.innerWidth - margin * 2 - 44)) + 'px';
+    sprite.style.top = (margin + Math.random() * (window.innerHeight - margin * 2 - 44)) + 'px';
+    sprite.dataset.alive = 'true';
+    sprite.dataset.driftX = (Math.random() - 0.5) * 60;
+    sprite.dataset.driftY = (Math.random() - 0.5) * 40;
+    sprite.dataset.phase = String(Math.random() * Math.PI * 2);
+
+    sprite.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (sprite.dataset.alive !== 'true') return;
+      sprite.dataset.alive = 'false';
+      sprite.classList.add('squashed');
+      sprite.textContent = '💥';
+      aphidGame.remaining--;
+      // Pop text
+      const ft = document.createElement('div');
+      ft.className = 'float-text';
+      ft.textContent = '🐛💥';
+      ft.style.left = e.clientX + 'px';
+      ft.style.top = e.clientY + 'px';
+      document.body.appendChild(ft);
+      setTimeout(() => ft.remove(), 1000);
+    });
+    sprite.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      sprite.click();
+    }, { passive: false });
+
+    overlay.appendChild(sprite);
+    aphidGame.aphids.push(sprite);
   }
 
-  document.getElementById('aphid-overlay').classList.add('active');
   document.getElementById('aphid-timer').style.display = 'block';
   document.getElementById('aphid-count').style.display = 'block';
   document.getElementById('event-pill').style.display = 'block';
-  document.getElementById('event-pill').textContent = '🐛 Aphid Attack! CLICK THEM!';
+  document.getElementById('event-pill').textContent = '🐛 Aphid Attack! TAP THEM!';
+  showEventBanner('aphid');
 }
 
 function updateAphidMinigame(dt) {
   aphidGame.timer -= dt;
-  const remaining = aphidGame.aphids.filter(a => a.alive).length;
-
   document.getElementById('aphid-timer').textContent = Math.ceil(Math.max(0, aphidGame.timer));
-  document.getElementById('aphid-count').textContent = `🐛 ${remaining} aphids remaining`;
+  document.getElementById('aphid-count').textContent = `🐛 ${aphidGame.remaining} aphids remaining`;
 
-  // Bob the aphids
-  aphidGame.aphids.forEach(a => {
-    if (a.alive) {
-      a.mesh.userData.bobPhase += dt * a.mesh.userData.bobSpeed;
-      a.mesh.position.y = a.mesh.userData.baseY + Math.sin(a.mesh.userData.bobPhase) * 0.3;
-      // Slight horizontal drift
-      a.mesh.position.x += Math.sin(a.mesh.userData.bobPhase * 0.7) * dt * 0.3;
-    }
+  // Animate aphid sprites — wander around screen
+  aphidGame.aphids.forEach(sprite => {
+    if (sprite.dataset.alive !== 'true') return;
+    const phase = parseFloat(sprite.dataset.phase) + dt * 2;
+    sprite.dataset.phase = String(phase);
+    const driftX = parseFloat(sprite.dataset.driftX);
+    const driftY = parseFloat(sprite.dataset.driftY);
+    let x = parseFloat(sprite.style.left) + Math.sin(phase) * driftX * dt;
+    let y = parseFloat(sprite.style.top) + Math.cos(phase * 0.7) * driftY * dt;
+    // Keep on screen
+    x = Math.max(10, Math.min(window.innerWidth - 54, x));
+    y = Math.max(10, Math.min(window.innerHeight - 54, y));
+    sprite.style.left = x + 'px';
+    sprite.style.top = y + 'px';
   });
 
-  if (remaining === 0) {
+  if (aphidGame.remaining <= 0) {
     endAphidMinigame(true);
   } else if (aphidGame.timer <= 0) {
     endAphidMinigame(false);
@@ -1374,15 +1514,16 @@ function updateAphidMinigame(dt) {
 
 function endAphidMinigame(success) {
   aphidGame.active = false;
-  // Clean up meshes
-  aphidGame.aphids.forEach(a => scene.remove(a.mesh));
+  // Clean up overlay
+  const overlay = document.getElementById('aphid-overlay');
+  overlay.classList.remove('active');
+  overlay.innerHTML = '';
   aphidGame.aphids = [];
-  aphidMeshes = [];
 
-  document.getElementById('aphid-overlay').classList.remove('active');
   document.getElementById('aphid-timer').style.display = 'none';
   document.getElementById('aphid-count').style.display = 'none';
   document.getElementById('event-pill').style.display = 'none';
+  hideEventEffects();
 
   const resultEl = document.getElementById('aphid-result');
   resultEl.style.display = 'block';
@@ -1403,6 +1544,92 @@ function endAphidMinigame(success) {
   }
 
   setTimeout(() => { resultEl.style.display = 'none'; }, 1500);
+}
+
+// ============ EVENT VISUAL EFFECTS ============
+let currentEventEffect = null;
+let shakeInterval = null;
+
+function showEventBanner(eventName) {
+  const banner = document.getElementById('event-banner');
+  const borderFx = document.getElementById('screen-border-effect');
+  const rainbow = document.getElementById('rainbow-overlay');
+  const sparkles = document.getElementById('sparkle-container');
+
+  // Reset all
+  hideEventEffects();
+
+  banner.style.display = 'block';
+
+  switch(eventName) {
+    case 'aphid':
+      banner.textContent = '🐛 APHID ATTACK!';
+      banner.style.background = 'rgba(200,30,30,0.85)';
+      // Red border pulse
+      borderFx.style.display = 'block';
+      borderFx.style.boxShadow = 'inset 0 0 60px rgba(255,0,0,0.5)';
+      borderFx.style.animation = 'none';
+      let pulseOn = true;
+      currentEventEffect = setInterval(() => {
+        pulseOn = !pulseOn;
+        borderFx.style.boxShadow = pulseOn ? 'inset 0 0 60px rgba(255,0,0,0.5)' : 'inset 0 0 30px rgba(255,0,0,0.2)';
+      }, 400);
+      break;
+    case 'pollinator':
+      banner.textContent = '🐝 Pollinator Visit!';
+      banner.style.background = 'rgba(200,170,30,0.85)';
+      // Golden sparkles
+      sparkles.style.display = 'block';
+      sparkles.innerHTML = '';
+      for (let i = 0; i < 20; i++) {
+        const s = document.createElement('div');
+        s.className = 'sparkle';
+        s.style.left = (20 + Math.random() * 60) + '%';
+        s.style.top = (20 + Math.random() * 60) + '%';
+        s.style.animationDelay = (Math.random() * 1) + 's';
+        s.style.width = s.style.height = (6 + Math.random() * 8) + 'px';
+        sparkles.appendChild(s);
+      }
+      break;
+    case 'wind':
+      banner.textContent = '💨 Strong Wind!';
+      banner.style.background = 'rgba(100,150,200,0.85)';
+      // Screen shake
+      let shakeAmt = 0;
+      shakeInterval = setInterval(() => {
+        shakeAmt = 2 + Math.random() * 3;
+        const sx = (Math.random() - 0.5) * shakeAmt;
+        const sy = (Math.random() - 0.5) * shakeAmt;
+        document.body.style.transform = `translate(${sx}px, ${sy}px)`;
+      }, 50);
+      currentEventEffect = shakeInterval;
+      break;
+    case 'rainbow':
+      banner.textContent = '🌈 Rainbow!';
+      banner.style.background = 'linear-gradient(90deg, rgba(255,0,0,0.7), rgba(255,165,0,0.7), rgba(255,255,0,0.7), rgba(0,128,0,0.7), rgba(0,0,255,0.7), rgba(75,0,130,0.7))';
+      rainbow.style.display = 'block';
+      break;
+  }
+
+  // Auto-hide banner after 3s but keep effects
+  setTimeout(() => { banner.style.display = 'none'; }, 3000);
+}
+
+function hideEventEffects() {
+  const banner = document.getElementById('event-banner');
+  const borderFx = document.getElementById('screen-border-effect');
+  const rainbow = document.getElementById('rainbow-overlay');
+  const sparkles = document.getElementById('sparkle-container');
+
+  banner.style.display = 'none';
+  borderFx.style.display = 'none';
+  rainbow.style.display = 'none';
+  sparkles.style.display = 'none';
+  sparkles.innerHTML = '';
+  document.body.style.transform = '';
+
+  if (currentEventEffect) { clearInterval(currentEventEffect); currentEventEffect = null; }
+  if (shakeInterval) { clearInterval(shakeInterval); shakeInterval = null; }
 }
 
 function addLeafHoles() {
@@ -1587,6 +1814,23 @@ let currentSoundSeason = null;
 function initAudio() {
   if (audioCtx) return;
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // Mobile: resume on any user gesture
+  if (audioCtx.state === 'suspended') {
+    const resumeAudio = () => {
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    };
+    document.addEventListener('touchstart', resumeAudio, { once: true });
+    document.addEventListener('click', resumeAudio, { once: true });
+  }
+}
+
+function enableSound() {
+  initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  soundEnabled = true;
+  document.getElementById('sound-toggle').textContent = '🔊';
+  document.getElementById('unmute-btn').style.display = 'none';
+  updateAmbientSounds();
 }
 
 function toggleSound() {
@@ -1597,6 +1841,7 @@ function toggleSound() {
     stopAllAmbient();
   } else {
     if (audioCtx.state === 'suspended') audioCtx.resume();
+    document.getElementById('unmute-btn').style.display = 'none';
     updateAmbientSounds();
   }
 }
@@ -1701,32 +1946,12 @@ initScene();
 
 renderer.domElement.addEventListener('click', (e) => {
   if (!G.alive || !G.started) return;
+  // During aphid minigame, don't trigger photosynthesis (aphids are HTML overlays)
+  if (aphidGame.active) return;
+
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouse, camera);
-
-  // Check aphid clicks first
-  if (aphidGame.active && aphidMeshes.length > 0) {
-    const aphidHits = raycaster.intersectObjects(aphidMeshes, false);
-    if (aphidHits.length > 0) {
-      const hitMesh = aphidHits[0].object;
-      const aphid = aphidGame.aphids.find(a => a.mesh === hitMesh && a.alive);
-      if (aphid) {
-        aphid.alive = false;
-        scene.remove(aphid.mesh);
-        aphidMeshes = aphidMeshes.filter(m => m !== hitMesh);
-        // Pop effect
-        const ft = document.createElement('div');
-        ft.className = 'float-text';
-        ft.textContent = '🐛💥';
-        ft.style.left = e.clientX + 'px';
-        ft.style.top = e.clientY + 'px';
-        document.body.appendChild(ft);
-        setTimeout(() => ft.remove(), 1000);
-      }
-      return; // Don't also trigger photosynthesis
-    }
-  }
 
   const hits = raycaster.intersectObjects(leafGroup.children, true);
   if (hits.length > 0) doPhotosynthesis(e);
